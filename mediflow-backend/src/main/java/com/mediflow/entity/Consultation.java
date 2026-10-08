@@ -14,12 +14,12 @@ public class Consultation {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long consultationId;
 
-  /*@OneToOne(optional = false)
+  @OneToOne(optional = false)
   @JoinColumn(
       name = "appointment_id",
       nullable = false,
       unique = true
-  )*/
+  )
   private Appointment appointment;
 
   @Column(length = 3000)
@@ -29,10 +29,10 @@ public class Consultation {
 
   private LocalDateTime createdAt;
 
-  /*@OneToMany(
+  @OneToMany(
       mappedBy = "consultation",
       cascade = CascadeType.ALL
-  )*/
+  )
   private List<Prescription> prescriptions = new ArrayList<>();
 
   @PrePersist

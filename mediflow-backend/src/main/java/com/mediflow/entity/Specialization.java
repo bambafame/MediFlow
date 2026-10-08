@@ -18,7 +18,7 @@ public class Specialization {
 
   private String description;
 
-  //@OneToMany(mappedBy = "specialization")
+  @OneToMany(mappedBy = "specialization")
   private List<Doctor> doctors = new ArrayList<>();
 
   public Specialization() {

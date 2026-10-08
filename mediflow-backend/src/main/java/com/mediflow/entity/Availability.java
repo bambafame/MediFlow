@@ -13,8 +13,8 @@ public class Availability {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long availabilityId;
 
-  /*@ManyToOne(optional = false)
-  @JoinColumn(name = "doctor_id", nullable = false)*/
+  @ManyToOne(optional = false)
+  @JoinColumn(name = "doctor_id", nullable = false)
   private Doctor doctor;
 
   @Enumerated(EnumType.STRING)

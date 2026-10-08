@@ -12,12 +12,12 @@ public class Appointment {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long appointmentId;
 
-  /*@ManyToOne(optional = false)
-  @JoinColumn(name = "patient_id", nullable = false)*/
+  @ManyToOne(optional = false)
+  @JoinColumn(name = "patient_id", nullable = false)
   private Patient patient;
 
-  /*@ManyToOne(optional = false)
-  @JoinColumn(name = "doctor_id", nullable = false)*/
+  @ManyToOne(optional = false)
+  @JoinColumn(name = "doctor_id", nullable = false)
   private Doctor doctor;
 
   @Column(nullable = false)
@@ -36,10 +36,10 @@ public class Appointment {
 
   private LocalDateTime updatedAt;
 
-  /*@OneToOne(
+  @OneToOne(
       mappedBy = "appointment",
       cascade = CascadeType.ALL
-  )*/
+  )
   private Consultation consultation;
 
   public Appointment() {

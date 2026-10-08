@@ -12,8 +12,8 @@ public class Prescription {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long prescriptionId;
 
-  /*@ManyToOne(optional = false)
-  @JoinColumn(name = "consultation_id")*/
+  @ManyToOne(optional = false)
+  @JoinColumn(name = "consultation_id")
   private Consultation consultation;
 
   @Column(nullable = false)

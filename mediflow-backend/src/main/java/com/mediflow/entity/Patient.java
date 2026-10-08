@@ -22,10 +22,10 @@ public class Patient extends User {
 
   private String mailingAddress;
 
-  /*@OneToMany(
+  @OneToMany(
       mappedBy = "patient",
       cascade = CascadeType.ALL
-  )*/
+  )
   private List<Appointment> appointments = new ArrayList<>();
 
   public Patient() {

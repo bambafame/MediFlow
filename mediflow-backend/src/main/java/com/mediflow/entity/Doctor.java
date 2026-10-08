@@ -21,20 +21,20 @@ public class Doctor extends User {
 
   private String bio;
 
-  /*@ManyToOne
-  @JoinColumn(name = "specialization_id")*/
+  @ManyToOne
+  @JoinColumn(name = "specialization_id")
   private Specialization specialization;
 
-  /*@OneToMany(
+  @OneToMany(
       mappedBy = "doctor",
       cascade = CascadeType.ALL
-  )*/
+  )
   private List<Appointment> appointments = new ArrayList<>();
 
-  /*@OneToMany(
+  @OneToMany(
       mappedBy = "doctor",
       cascade = CascadeType.ALL
-  )*/
+  )
   private List<Availability> availabilities = new ArrayList<>();
 
   public Doctor() {
