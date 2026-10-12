@@ -1,10 +1,15 @@
 package com.mediflow.service;
 
+import com.mediflow.dto.doctor.CreateDoctorRequest;
+import com.mediflow.dto.doctor.DoctorResponse;
+import com.mediflow.dto.doctor.UpdateDoctorRequest;
 import com.mediflow.entity.Doctor;
 import com.mediflow.entity.Specialization;
 import com.mediflow.exception.ResourceNotFoundException;
+import com.mediflow.mapper.DoctorMapper;
 import com.mediflow.repository.DoctorRepository;
 import com.mediflow.repository.SpecializationRepository;
+import com.mediflow.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,62 +21,130 @@ public class DoctorService {
 
   private final DoctorRepository doctorRepository;
   private final SpecializationRepository specializationRepository;
+  private final UserRepository userRepository;
 
   public DoctorService(
       DoctorRepository doctorRepository,
-      SpecializationRepository specializationRepository) {
+      SpecializationRepository specializationRepository,
+      UserRepository userRepository
+  ) {
 
     this.doctorRepository = doctorRepository;
     this.specializationRepository = specializationRepository;
+    this.userRepository = userRepository;
   }
 
-  public Doctor createDoctor(Doctor doctor, Long specializationId) {
+  public DoctorResponse createDoctor(CreateDoctorRequest request) {
 
-    Specialization specialization =
-        specializationRepository.findById(specializationId)
-            .orElseThrow(() ->
-                new ResourceNotFoundException(
-                    "Specialization not found with id: "
-                        + specializationId
-                ));
+    if (userRepository.existsByUsername(request.username())) {
+      throw new IllegalArgumentException(
+          "Username already exists"
+      );
+    }
 
-    doctor.setSpecialization(specialization);
+    if (userRepository.existsByEmail(request.email())) {
+      throw new IllegalArgumentException(
+          "Email already exists"
+      );
+    }
 
-    return doctorRepository.save(doctor);
-  }
-
-  @Transactional(readOnly = true)
-  public Doctor getDoctor(Long id) {
-    return doctorRepository.findById(id)
+    Specialization specialization = specializationRepository
+        .findById(request.specializationId())
         .orElseThrow(() ->
             new ResourceNotFoundException(
-                "Doctor not found with id: " + id
-            ));
+                    "Specialization not found with id: " + request.specializationId()
+            )
+        );
+
+    Doctor doctor = new Doctor();
+
+    doctor.setUsername(request.username());
+    doctor.setPasswordHash(request.password()); // temporary
+    doctor.setEmail(request.email());
+    doctor.setPhoneNumber(request.phoneNumber());
+    doctor.setFirstName(request.firstName());
+    doctor.setLastName(request.lastName());
+    doctor.setLicenseNumber(request.licenseNumber());
+    doctor.setBio(request.bio());
+    doctor.setSpecialization(specialization);
+
+    return DoctorMapper.toResponse(doctorRepository.save(doctor));
   }
 
   @Transactional(readOnly = true)
-  public List<Doctor> getAllDoctors() {
-    return doctorRepository.findAll();
+  public DoctorResponse getDoctor(Long id) {
+
+    return DoctorMapper.toResponse(findDoctor(id));
   }
 
   @Transactional(readOnly = true)
-  public List<Doctor> findBySpecialization(String specialization) {
+  public List<DoctorResponse> getAllDoctors() {
+
     return doctorRepository
-        .findBySpecializationNameIgnoreCase(specialization);
+        .findAll()
+        .stream()
+        .map(DoctorMapper::toResponse)
+        .toList();
   }
 
-  public Doctor updateDoctor(Long id, Doctor updatedDoctor) {
+  @Transactional(readOnly = true)
+  public List<DoctorResponse> findBySpecialization(String specialization) {
 
-    Doctor doctor = getDoctor(id);
+    return doctorRepository
+        .findBySpecializationNameIgnoreCase(specialization)
+        .stream()
+        .map(DoctorMapper::toResponse)
+        .toList();
+  }
 
-    doctor.setFirstName(updatedDoctor.getFirstName());
-    doctor.setLastName(updatedDoctor.getLastName());
-    doctor.setLicenseNumber(updatedDoctor.getLicenseNumber());
-    doctor.setBio(updatedDoctor.getBio());
+  public DoctorResponse updateDoctor(Long id, UpdateDoctorRequest request) {
 
-    doctor.setEmail(updatedDoctor.getEmail());
-    doctor.setPhoneNumber(updatedDoctor.getPhoneNumber());
+    Doctor doctor = findDoctor(id);
 
-    return doctorRepository.save(doctor);
+    if (request.firstName() != null) {
+      doctor.setFirstName(request.firstName());
+    }
+
+    if (request.lastName() != null) {
+      doctor.setLastName(request.lastName());
+    }
+
+    if (request.email() != null) {
+      doctor.setEmail(request.email());
+    }
+
+    if (request.phoneNumber() != null) {
+      doctor.setPhoneNumber(request.phoneNumber());
+    }
+
+    if (request.licenseNumber() != null) {
+      doctor.setLicenseNumber(request.licenseNumber());
+    }
+
+    if (request.bio() != null) {
+      doctor.setBio(request.bio());
+    }
+
+    if (request.specializationId() != null) {
+
+      Specialization specialization =
+          specializationRepository
+              .findById(request.specializationId())
+              .orElseThrow(() ->
+                  new ResourceNotFoundException("Specialization not found")
+              );
+
+      doctor.setSpecialization(specialization);
+    }
+
+    return DoctorMapper.toResponse(doctorRepository.save(doctor));
+  }
+
+  private Doctor findDoctor(Long id) {
+
+    return doctorRepository.findById(id)
+        .orElseThrow(() ->
+            new ResourceNotFoundException("Doctor not found with id: " + id)
+        );
   }
 }

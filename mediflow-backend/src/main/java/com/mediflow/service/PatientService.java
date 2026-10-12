@@ -1,8 +1,13 @@
 package com.mediflow.service;
 
+import com.mediflow.dto.patient.CreatePatientRequest;
+import com.mediflow.dto.patient.PatientResponse;
+import com.mediflow.dto.patient.UpdatePatientRequest;
 import com.mediflow.entity.Patient;
 import com.mediflow.exception.ResourceNotFoundException;
+import com.mediflow.mapper.PatientMapper;
 import com.mediflow.repository.PatientRepository;
+import com.mediflow.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,46 +18,110 @@ import java.util.List;
 public class PatientService {
 
   private final PatientRepository patientRepository;
+  private final UserRepository userRepository;
 
-  public PatientService(PatientRepository patientRepository) {
+  public PatientService(
+      PatientRepository patientRepository,
+      UserRepository userRepository
+  ) {
+
     this.patientRepository = patientRepository;
+    this.userRepository = userRepository;
   }
 
-  public Patient createPatient(Patient patient) {
-    return patientRepository.save(patient);
+  public PatientResponse createPatient(CreatePatientRequest request) {
+
+    if (userRepository.existsByUsername(request.username())) {
+      throw new IllegalArgumentException(
+          "Username already exists"
+      );
+    }
+
+    if (userRepository.existsByEmail(request.email())) {
+      throw new IllegalArgumentException(
+          "Email already exists"
+      );
+    }
+
+    Patient patient = new Patient();
+
+    patient.setUsername(request.username());
+    patient.setPasswordHash(request.password()); // temporary
+    patient.setEmail(request.email());
+    patient.setPhoneNumber(request.phoneNumber());
+    patient.setFirstName(request.firstName());
+    patient.setLastName(request.lastName());
+    patient.setDateOfBirth(request.dateOfBirth());
+    patient.setMailingAddress(request.mailingAddress());
+
+    Patient saved = patientRepository.save(patient);
+
+    return PatientMapper.toResponse(saved);
   }
 
   @Transactional(readOnly = true)
-  public Patient getPatient(Long id) {
-    return patientRepository.findById(id)
-        .orElseThrow(() ->
-            new ResourceNotFoundException(
-                "Patient not found with id: " + id
-            ));
+  public PatientResponse getPatient(Long id) {
+
+    Patient patient = findPatient(id);
+
+    return PatientMapper.toResponse(patient);
   }
 
   @Transactional(readOnly = true)
-  public List<Patient> getAllPatients() {
-    return patientRepository.findAll();
+  public List<PatientResponse> getAllPatients() {
+
+    return patientRepository
+        .findAll()
+        .stream()
+        .map(PatientMapper::toResponse)
+        .toList();
   }
 
-  public Patient updatePatient(Long id, Patient updatedPatient) {
+  public PatientResponse updatePatient(Long id, UpdatePatientRequest request) {
 
-    Patient patient = getPatient(id);
+    Patient patient = findPatient(id);
 
-    patient.setFirstName(updatedPatient.getFirstName());
-    patient.setLastName(updatedPatient.getLastName());
-    patient.setDateOfBirth(updatedPatient.getDateOfBirth());
-    patient.setMailingAddress(updatedPatient.getMailingAddress());
+    if (request.firstName() != null) {
+      patient.setFirstName(request.firstName());
+    }
 
-    patient.setEmail(updatedPatient.getEmail());
-    patient.setPhoneNumber(updatedPatient.getPhoneNumber());
+    if (request.lastName() != null) {
+      patient.setLastName(request.lastName());
+    }
 
-    return patientRepository.save(patient);
+    if (request.email() != null) {
+      patient.setEmail(request.email());
+    }
+
+    if (request.phoneNumber() != null) {
+      patient.setPhoneNumber(request.phoneNumber());
+    }
+
+    if (request.dateOfBirth() != null) {
+      patient.setDateOfBirth(request.dateOfBirth());
+    }
+
+    if (request.mailingAddress() != null) {
+      patient.setMailingAddress(request.mailingAddress());
+    }
+
+    Patient saved = patientRepository.save(patient);
+
+    return PatientMapper.toResponse(saved);
   }
 
   public void deletePatient(Long id) {
-    Patient patient = getPatient(id);
+
+    Patient patient = findPatient(id);
+
     patientRepository.delete(patient);
+  }
+
+  private Patient findPatient(Long id) {
+
+    return patientRepository.findById(id)
+        .orElseThrow(
+            () -> new ResourceNotFoundException("Patient not found with id: " + id)
+        );
   }
 }

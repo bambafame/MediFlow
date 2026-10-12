@@ -1,8 +1,11 @@
 package com.mediflow.service;
 
+import com.mediflow.dto.prescription.CreatePrescriptionRequest;
+import com.mediflow.dto.prescription.PrescriptionResponse;
 import com.mediflow.entity.Consultation;
 import com.mediflow.entity.Prescription;
 import com.mediflow.exception.ResourceNotFoundException;
+import com.mediflow.mapper.PrescriptionMapper;
 import com.mediflow.repository.ConsultationRepository;
 import com.mediflow.repository.PrescriptionRepository;
 import org.springframework.stereotype.Service;
@@ -19,39 +22,54 @@ public class PrescriptionService {
 
   public PrescriptionService(
       PrescriptionRepository prescriptionRepository,
-      ConsultationRepository consultationRepository)
-  {
+      ConsultationRepository consultationRepository
+  ) {
+
     this.prescriptionRepository = prescriptionRepository;
+
     this.consultationRepository = consultationRepository;
   }
 
-  public Prescription createPrescription(Long consultationId, Prescription prescription) {
+  public PrescriptionResponse createPrescription(CreatePrescriptionRequest request) {
 
-    Consultation consultation = consultationRepository.findById(consultationId)
-            .orElseThrow(() ->
-                new ResourceNotFoundException(
-                    "Consultation not found with id: " + consultationId
-                ));
+    Consultation consultation = consultationRepository
+            .findById(request.consultationId())
+            .orElseThrow(() -> new ResourceNotFoundException("Consultation not found"));
+
+    Prescription prescription = new Prescription();
 
     prescription.setConsultation(consultation);
 
-    return prescriptionRepository.save(prescription);
+    prescription.setMedicationName(request.medicationName());
+
+    prescription.setDosage(request.dosage());
+
+    prescription.setInstructions(request.instructions());
+
+    Prescription saved = prescriptionRepository.save(prescription);
+
+    return PrescriptionMapper.toResponse(saved);
   }
 
   @Transactional(readOnly = true)
-  public Prescription getPrescription(Long id) {
+  public PrescriptionResponse getPrescription(Long id) {
 
-    return prescriptionRepository.findById(id)
+    Prescription prescription = prescriptionRepository
+        .findById(id)
         .orElseThrow(() ->
-            new ResourceNotFoundException(
-                "Prescription not found with id: " + id
-            ));
+            new ResourceNotFoundException("Prescription not found with id: " + id)
+        );
+    return PrescriptionMapper.toResponse(prescription);
   }
 
   @Transactional(readOnly = true)
-  public List<Prescription> getPatientPrescriptions(Long patientId) {
+  public List<PrescriptionResponse>
+  getPatientPrescriptions(Long patientId) {
 
     return prescriptionRepository
-        .findByConsultationAppointmentPatientUserId(patientId);
+        .findByConsultationAppointmentPatientUserId(patientId)
+        .stream()
+        .map(PrescriptionMapper::toResponse)
+        .toList();
   }
 }

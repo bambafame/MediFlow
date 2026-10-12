@@ -1,5 +1,8 @@
 package com.mediflow.service;
 
+import com.mediflow.dto.appointment.AppointmentResponse;
+import com.mediflow.dto.appointment.CreateAppointmentRequest;
+import com.mediflow.dto.appointment.RescheduleAppointmentRequest;
 import com.mediflow.entity.Appointment;
 import com.mediflow.entity.AppointmentStatus;
 import com.mediflow.entity.Availability;
@@ -8,6 +11,7 @@ import com.mediflow.entity.Patient;
 import com.mediflow.exception.AppointmentConflictException;
 import com.mediflow.exception.InvalidAppointmentException;
 import com.mediflow.exception.ResourceNotFoundException;
+import com.mediflow.mapper.AppointmentMapper;
 import com.mediflow.repository.AppointmentRepository;
 import com.mediflow.repository.AvailabilityRepository;
 import com.mediflow.repository.DoctorRepository;
@@ -41,31 +45,26 @@ public class AppointmentService {
     this.availabilityRepository = availabilityRepository;
   }
 
-  public Appointment bookAppointment(
-      Long patientId,
-      Long doctorId,
-      LocalDateTime startDateTime,
-      LocalDateTime endDateTime,
-      String reason)
-  {
+  public AppointmentResponse bookAppointment(CreateAppointmentRequest request) {
+
+    Long patientId = request.patientId();
+    Long doctorId = request.doctorId();
 
     Patient patient = patientRepository.findById(patientId)
-        .orElseThrow(() ->
-            new ResourceNotFoundException(
-                "Patient not found with id: " + patientId
-            ));
+        .orElseThrow(
+            () -> new ResourceNotFoundException("Patient not found with id: " + patientId)
+        );
 
     Doctor doctor = doctorRepository.findById(doctorId)
-        .orElseThrow(() ->
-            new ResourceNotFoundException(
-                "Doctor not found with id: " + doctorId
-            ));
+        .orElseThrow(
+            () -> new ResourceNotFoundException("Doctor not found with id: " + doctorId)
+        );
 
     validateSchedulingRules(
         patientId,
         doctorId,
-        startDateTime,
-        endDateTime,
+        request.startDateTime(),
+        request.endDateTime(),
         null
     );
 
@@ -73,27 +72,31 @@ public class AppointmentService {
 
     appointment.setPatient(patient);
     appointment.setDoctor(doctor);
-    appointment.setStartDateTime(startDateTime);
-    appointment.setEndDateTime(endDateTime);
-    appointment.setReason(reason);
+    appointment.setStartDateTime(request.startDateTime());
+    appointment.setEndDateTime(request.endDateTime());
+    appointment.setReason(request.reason());
     appointment.setStatus(AppointmentStatus.SCHEDULED);
 
-    return appointmentRepository.save(appointment);
+    Appointment saved = appointmentRepository.save(appointment);
+
+    return AppointmentMapper.toResponse(saved);
   }
 
-  public Appointment rescheduleAppointment(
-      Long appointmentId, LocalDateTime newStart, LocalDateTime newEnd)
-  {
+  public AppointmentResponse rescheduleAppointment(
+      Long appointmentId,
+      RescheduleAppointmentRequest request) {
 
-    Appointment appointment = getAppointment(appointmentId);
+    Appointment appointment = findAppointment(appointmentId);
 
     if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
+
       throw new InvalidAppointmentException(
           "Cancelled appointments cannot be rescheduled"
       );
     }
 
     if (appointment.getStatus() == AppointmentStatus.COMPLETED) {
+
       throw new InvalidAppointmentException(
           "Completed appointments cannot be rescheduled"
       );
@@ -106,73 +109,82 @@ public class AppointmentService {
     validateSchedulingRules(
         patientId,
         doctorId,
-        newStart,
-        newEnd,
+        request.startDateTime(),
+        request.endDateTime(),
         appointmentId
     );
 
-    appointment.setStartDateTime(newStart);
-    appointment.setEndDateTime(newEnd);
+    appointment.setStartDateTime(request.startDateTime());
 
-    return appointmentRepository.save(appointment);
+    appointment.setEndDateTime(request.endDateTime());
+
+    return AppointmentMapper.toResponse(appointmentRepository.save(appointment));
   }
 
   @Transactional(readOnly = true)
-  public Appointment getAppointment(Long id) {
+  public AppointmentResponse getAppointment(Long id) {
 
-    return appointmentRepository.findById(id)
-        .orElseThrow(() ->
-            new ResourceNotFoundException(
-                "Appointment not found with id: " + id
-            ));
+    return AppointmentMapper.toResponse(findAppointment(id));
   }
 
   @Transactional(readOnly = true)
-  public List<Appointment> getPatientAppointments(Long patientId) {
+  public List<AppointmentResponse> getPatientAppointments(Long patientId) {
 
-    return appointmentRepository.findByPatientUserId(patientId);
+    return appointmentRepository
+        .findByPatientUserId(patientId)
+        .stream()
+        .map(AppointmentMapper::toResponse)
+        .toList();
   }
 
   @Transactional(readOnly = true)
-  public List<Appointment> getDoctorAppointments(Long doctorId) {
+  public List<AppointmentResponse> getDoctorAppointments(Long doctorId) {
 
-    return appointmentRepository.findByDoctorUserId(doctorId);
+    return appointmentRepository
+        .findByDoctorUserId(doctorId)
+        .stream()
+        .map(AppointmentMapper::toResponse)
+        .toList();
   }
 
-  public Appointment cancelAppointment(Long id) {
+  public AppointmentResponse cancelAppointment(
+      Long id) {
 
-    Appointment appointment = getAppointment(id);
+    Appointment appointment = findAppointment(id);
 
     if (appointment.getStatus() == AppointmentStatus.COMPLETED) {
-      throw new InvalidAppointmentException(
-          "Completed appointments cannot be cancelled"
-      );
+
+      throw new InvalidAppointmentException("Completed appointments cannot be cancelled");
     }
 
     if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
-      throw new InvalidAppointmentException(
-          "Appointment is already cancelled"
-      );
+
+      throw new InvalidAppointmentException("Appointment is already cancelled");
     }
 
-    appointment.setStatus(AppointmentStatus.CANCELLED);
+    appointment.setStatus(
+        AppointmentStatus.CANCELLED
+    );
 
-    return appointmentRepository.save(appointment);
+    return AppointmentMapper.toResponse(
+        appointmentRepository.save(
+            appointment
+        )
+    );
   }
 
-  public Appointment confirmAppointment(Long id) {
+  public AppointmentResponse confirmAppointment(Long id) {
 
-    Appointment appointment = getAppointment(id);
+    Appointment appointment = findAppointment(id);
 
     if (appointment.getStatus() != AppointmentStatus.SCHEDULED) {
-      throw new InvalidAppointmentException(
-          "Only scheduled appointments can be confirmed"
-      );
+
+      throw new InvalidAppointmentException("Only scheduled appointments can be confirmed");
     }
 
     appointment.setStatus(AppointmentStatus.CONFIRMED);
 
-    return appointmentRepository.save(appointment);
+    return AppointmentMapper.toResponse(appointmentRepository.save(appointment));
   }
 
   private void validateSchedulingRules(
@@ -357,6 +369,14 @@ public class AppointmentService {
               + "during the requested time"
       );
     }
+  }
+
+  private Appointment findAppointment(Long id) {
+
+    return appointmentRepository.findById(id)
+        .orElseThrow(
+            () -> new ResourceNotFoundException("Appointment not found with id: " + id)
+        );
   }
 }
 
