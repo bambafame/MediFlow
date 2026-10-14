@@ -16,6 +16,7 @@ import com.mediflow.repository.AppointmentRepository;
 import com.mediflow.repository.AvailabilityRepository;
 import com.mediflow.repository.DoctorRepository;
 import com.mediflow.repository.PatientRepository;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -377,6 +378,15 @@ public class AppointmentService {
         .orElseThrow(
             () -> new ResourceNotFoundException("Appointment not found with id: " + id)
         );
+  }
+
+  public List<AppointmentResponse> getAllAppointments() {
+
+    return appointmentRepository
+        .findAll(Sort.by(Sort.Direction.ASC, "startDateTime"))
+        .stream()
+        .map(AppointmentMapper::toResponse)
+        .toList();
   }
 }
 

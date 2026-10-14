@@ -85,6 +85,22 @@ function PatientDetails() {
               Edit
             </Link>
 
+            <Link
+              to={`/patients/${patient.id}/prescriptions`}
+              className="
+                rounded-lg
+                bg-purple-600
+                px-4
+                py-2.5
+                text-sm
+                font-semibold
+                text-white
+                hover:bg-purple-700
+              "
+            >
+              View Prescriptions
+            </Link>
+
             <button
               onClick={handleDelete}
               className="
@@ -160,6 +176,92 @@ function PatientDetails() {
             value={patient.enabled ? "Active" : "Inactive"}
           />
         </dl>
+      </div>
+
+      {/* Patient workflow links */}
+
+      <div
+        className="
+          mt-8
+          grid
+          gap-4
+          md:grid-cols-3
+        "
+      >
+        <Link
+          to={`/appointments?patientId=${patient.id}`}
+          className="
+            rounded-xl
+            border
+            border-slate-200
+            bg-white
+            p-5
+            shadow-sm
+            transition
+            hover:border-blue-300
+            hover:shadow-md
+          "
+        >
+          <h3 className="font-semibold text-slate-900">Appointments</h3>
+
+          <p className="mt-2 text-sm text-slate-500">
+            View this patient's scheduled and previous appointments.
+          </p>
+
+          <p className="mt-4 text-sm font-semibold text-blue-600">
+            View Appointments →
+          </p>
+        </Link>
+
+        <Link
+          to={`/appointments/new?patientId=${patient.id}`}
+          className="
+            rounded-xl
+            border
+            border-slate-200
+            bg-white
+            p-5
+            shadow-sm
+            transition
+            hover:border-blue-300
+            hover:shadow-md
+          "
+        >
+          <h3 className="font-semibold text-slate-900">Book Appointment</h3>
+
+          <p className="mt-2 text-sm text-slate-500">
+            Schedule a new appointment for this patient.
+          </p>
+
+          <p className="mt-4 text-sm font-semibold text-blue-600">
+            Book Appointment →
+          </p>
+        </Link>
+
+        <Link
+          to={`/patients/${patient.id}/prescriptions`}
+          className="
+            rounded-xl
+            border
+            border-slate-200
+            bg-white
+            p-5
+            shadow-sm
+            transition
+            hover:border-blue-300
+            hover:shadow-md
+          "
+        >
+          <h3 className="font-semibold text-slate-900">Prescriptions</h3>
+
+          <p className="mt-2 text-sm text-slate-500">
+            View medications prescribed to this patient.
+          </p>
+
+          <p className="mt-4 text-sm font-semibold text-blue-600">
+            View Prescriptions →
+          </p>
+        </Link>
       </div>
 
       <div className="mt-6">

@@ -1,13 +1,34 @@
 export const formatTime = (time) => {
-  if (!time) return "";
+  if (!time) {
+    return "";
+  }
 
-  const [hourString, minute] = time.split(":");
+  const parts = time.split(":");
 
-  let hour = Number(hourString);
+  const hourNumber = Number(parts[0]);
 
-  const period = hour >= 12 ? "pm" : "am";
+  const minute = parts[1] || "00";
 
-  hour = hour % 12 || 12;
+  const period = hourNumber >= 12 ? "PM" : "AM";
 
-  return `${hour.toString().padStart(2, "0")}:${minute}${period}`;
+  const displayHour = hourNumber % 12 || 12;
+
+  return `${displayHour.toString().padStart(2, "0")}:` + `${minute}${period}`;
+};
+
+export const formatDateTime = (dateTime) => {
+  if (!dateTime) {
+    return "";
+  }
+
+  const date = new Date(dateTime);
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(date);
 };

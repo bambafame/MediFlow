@@ -44,4 +44,12 @@ public class PrescriptionController {
 
     return ResponseEntity.ok(prescriptionService.getPatientPrescriptions(patientId));
   }
+
+  @GetMapping("/consultation/{consultationId}")
+  public List<PrescriptionResponse> getByConsultation(
+      @PathVariable Long consultationId
+  ) {
+
+    return prescriptionService.getPrescriptionsByConsultation(consultationId);
+  }
 }

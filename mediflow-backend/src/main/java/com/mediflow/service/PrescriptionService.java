@@ -72,4 +72,13 @@ public class PrescriptionService {
         .map(PrescriptionMapper::toResponse)
         .toList();
   }
+
+  public List<PrescriptionResponse> getPrescriptionsByConsultation(Long consultationId) {
+
+    return prescriptionRepository
+        .findByConsultationConsultationId(consultationId)
+        .stream()
+        .map(PrescriptionMapper::toResponse)
+        .toList();
+  }
 }

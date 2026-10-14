@@ -196,10 +196,109 @@ function DoctorDetails() {
         </div>
       </section>
 
+      {/* Availability */}
+
+      <section
+        className="
+          mt-8
+          rounded-xl
+          border
+          border-slate-200
+          bg-white
+          p-8
+          shadow-sm
+        "
+      >
+        <h2 className="text-xl font-semibold text-slate-900">
+          Doctor Availability
+        </h2>
+
+        <p className="mt-1 text-sm text-slate-500">
+          Configure the days and times when this doctor accepts appointments.
+        </p>
+
+        <div className="mt-6">
+          <AvailabilityForm
+            doctorId={id}
+            onCreated={handleAvailabilityCreated}
+          />
+        </div>
+
+        <div className="mt-8">
+          <AvailabilityList availability={availability} />
+        </div>
+      </section>
+
+      {/* Doctor workflow links */}
+
+      <div
+        className="
+          mt-8
+          grid
+          gap-4
+          md:grid-cols-2
+        "
+      >
+        <Link
+          to={`/appointments/new?doctorId=${doctor.id}`}
+          className="
+            rounded-xl
+            border
+            border-slate-200
+            bg-white
+            p-5
+            shadow-sm
+            transition
+            hover:border-blue-300
+            hover:shadow-md
+          "
+        >
+          <h3 className="font-semibold text-slate-900">Appointments</h3>
+
+          <p className="mt-2 text-sm text-slate-500">
+            View this doctor's scheduled, confirmed, and completed appointments.
+          </p>
+
+          <p className="mt-4 text-sm font-semibold text-blue-600">
+            View Doctor Appointments →
+          </p>
+        </Link>
+
+        <Link
+          to="/appointments/new"
+          className="
+            rounded-xl
+            border
+            border-slate-200
+            bg-white
+            p-5
+            shadow-sm
+            transition
+            hover:border-blue-300
+            hover:shadow-md
+          "
+        >
+          <h3 className="font-semibold text-slate-900">Book Appointment</h3>
+
+          <p className="mt-2 text-sm text-slate-500">
+            Schedule a new appointment with this doctor.
+          </p>
+
+          <p className="mt-4 text-sm font-semibold text-blue-600">
+            Book Appointment →
+          </p>
+        </Link>
+      </div>
+
       <div className="mt-6">
         <Link
           to="/doctors"
-          className="text-sm font-medium text-blue-600 hover:text-blue-800"
+          className="
+            text-sm
+            font-medium
+            text-blue-600
+            hover:text-blue-800
+          "
         >
           ← Back to Doctors
         </Link>

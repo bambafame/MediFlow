@@ -8,4 +8,5 @@ import java.util.List;
 public interface PrescriptionRepository extends JpaRepository<Prescription, Long> {
 
   List<Prescription> findByConsultationAppointmentPatientUserId(Long patientId);
+  List<Prescription> findByConsultationConsultationId(Long consultationId);
 }

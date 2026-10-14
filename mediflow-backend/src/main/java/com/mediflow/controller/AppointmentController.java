@@ -72,4 +72,10 @@ public class AppointmentController {
 
     return ResponseEntity.ok(appointmentService.cancelAppointment(id));
   }
+
+  @GetMapping
+  public List<AppointmentResponse> getAllAppointments() {
+
+    return appointmentService.getAllAppointments();
+  }
 }

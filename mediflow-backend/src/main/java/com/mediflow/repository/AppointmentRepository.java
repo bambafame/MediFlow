@@ -81,4 +81,14 @@ public interface AppointmentRepository
       @Param("startDateTime") LocalDateTime startDateTime,
       @Param("endDateTime") LocalDateTime endDateTime
   );
+
+  long countByStatus(AppointmentStatus status);
+
+  List<Appointment> findByStartDateTimeBetweenOrderByStartDateTimeAsc(
+      LocalDateTime start, LocalDateTime end
+  );
+
+  List<Appointment> findTop10ByStartDateTimeAfterAndStatusNotOrderByStartDateTimeAsc(
+      LocalDateTime dateTime, AppointmentStatus status
+  );
 }
