@@ -6,6 +6,7 @@ import com.mediflow.service.SpecializationService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +22,7 @@ public class SpecializationController {
     this.specializationService = specializationService;
   }
 
+  @PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST','DOCTOR')")
   @PostMapping
   public ResponseEntity<SpecializationResponse>
   create(@Valid @RequestBody CreateSpecializationRequest request) {
@@ -30,12 +32,14 @@ public class SpecializationController {
         .body(specializationService.create(request));
   }
 
+  @PreAuthorize("isAuthenticated()")
   @GetMapping
   public ResponseEntity<List<SpecializationResponse>> getAll() {
 
     return ResponseEntity.ok(specializationService.getAll());
   }
 
+  @PreAuthorize("isAuthenticated()")
   @GetMapping("/{id}")
   public ResponseEntity<SpecializationResponse> getById(@PathVariable Long id) {
 

@@ -4,12 +4,14 @@ import com.mediflow.dto.doctor.CreateDoctorRequest;
 import com.mediflow.dto.doctor.DoctorResponse;
 import com.mediflow.dto.doctor.UpdateDoctorRequest;
 import com.mediflow.entity.Doctor;
+import com.mediflow.entity.Role;
 import com.mediflow.entity.Specialization;
 import com.mediflow.exception.ResourceNotFoundException;
 import com.mediflow.mapper.DoctorMapper;
 import com.mediflow.repository.DoctorRepository;
 import com.mediflow.repository.SpecializationRepository;
 import com.mediflow.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,16 +24,18 @@ public class DoctorService {
   private final DoctorRepository doctorRepository;
   private final SpecializationRepository specializationRepository;
   private final UserRepository userRepository;
+  private final PasswordEncoder passwordEncoder;
 
   public DoctorService(
       DoctorRepository doctorRepository,
       SpecializationRepository specializationRepository,
-      UserRepository userRepository
+      UserRepository userRepository, PasswordEncoder passwordEncoder
   ) {
 
     this.doctorRepository = doctorRepository;
     this.specializationRepository = specializationRepository;
     this.userRepository = userRepository;
+    this.passwordEncoder = passwordEncoder;
   }
 
   public DoctorResponse createDoctor(CreateDoctorRequest request) {
@@ -58,8 +62,9 @@ public class DoctorService {
 
     Doctor doctor = new Doctor();
 
+    doctor.setRole(Role.DOCTOR);
     doctor.setUsername(request.username());
-    doctor.setPasswordHash(request.password()); // temporary
+    doctor.setPasswordHash(passwordEncoder.encode(request.password()));
     doctor.setEmail(request.email());
     doctor.setPhoneNumber(request.phoneNumber());
     doctor.setFirstName(request.firstName());

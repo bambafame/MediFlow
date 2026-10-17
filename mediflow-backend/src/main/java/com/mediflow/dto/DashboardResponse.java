@@ -6,22 +6,18 @@ import java.util.List;
 
 public record DashboardResponse(
 
-    long totalPatients,
+    String role,
 
-    long totalDoctors,
+    Long totalPatients,
+    Long totalDoctors,
 
     long totalAppointments,
-
     long scheduledAppointments,
-
     long confirmedAppointments,
-
     long completedAppointments,
-
     long cancelledAppointments,
 
     List<AppointmentResponse> todayAppointments,
-
     List<AppointmentResponse> upcomingAppointments,
 
     List<PatientResponse> recentPatients

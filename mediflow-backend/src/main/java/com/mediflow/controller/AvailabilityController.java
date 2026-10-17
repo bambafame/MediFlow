@@ -7,6 +7,7 @@ import com.mediflow.service.AvailabilityService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.DayOfWeek;
@@ -23,6 +24,9 @@ public class AvailabilityController {
     this.availabilityService = availabilityService;
   }
 
+  @PreAuthorize(
+      "hasAnyRole('ADMIN','RECEPTIONIST') or @authorizationService.isCurrentDoctor(#doctorId)"
+  )
   @PostMapping
   public ResponseEntity<AvailabilityResponse> createAvailability(
       @PathVariable Long doctorId,
@@ -34,6 +38,7 @@ public class AvailabilityController {
     return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(saved));
   }
 
+  @PreAuthorize("isAuthenticated()")
   @GetMapping
   public ResponseEntity<List<AvailabilityResponse>> getDoctorAvailability(
       @PathVariable Long doctorId,

@@ -8,6 +8,8 @@ import { getDoctors } from "../../services/doctorService";
 
 import { getDoctorAvailability } from "../../services/availabilityService";
 
+import { useAuth } from "../../context/useAuth";
+
 import { createAppointment } from "../../services/appointmentService";
 
 import { formatTime } from "../../utils/timeUtils";
@@ -49,18 +51,18 @@ function AppointmentForm() {
 
   const [error, setError] = useState("");
 
-  const [formData, setFormData] = useState({
-    patientId: patientIdFromUrl,
+  const { auth } = useAuth();
 
-    doctorId: doctorIdFromUrl,
+  const isPatient = auth?.role === "PATIENT";
 
-    appointmentDate: "",
-
+  const [formData, setFormData] = useState(() => ({
+    patientId: isPatient ? String(auth.userId) : patientIdFromUrl || "",
+    doctorId: doctorIdFromUrl || "",
+    date: "",
     startTime: "",
     endTime: "",
-
     reason: "",
-  });
+  }));
 
   /*
    * Load patients and doctors once
@@ -68,49 +70,58 @@ function AppointmentForm() {
   useEffect(() => {
     let cancelled = false;
 
-    const loadInitialData = async () => {
+    const loadData = async () => {
       try {
-        const [patientData, doctorData] = await Promise.all([
-          getPatients(),
-          getDoctors(),
-        ]);
-
-        if (cancelled) {
-          return;
-        }
-
-        setPatients(patientData);
-
-        setDoctors(doctorData);
-
         /*
-         * Doctor was supplied through:
-         *
-         * /appointments/new?doctorId=2
-         *
-         * Load that doctor's availability
-         * automatically.
+         * Patient only needs doctors.
          */
-        if (doctorIdFromUrl) {
-          setLoadingAvailability(true);
+        if (isPatient) {
+          const doctorData = await getDoctors();
 
-          try {
+          if (!cancelled) {
+            setDoctors(doctorData);
+
+            setPatients([]);
+          }
+
+          if (doctorIdFromUrl) {
             const availabilityData =
               await getDoctorAvailability(doctorIdFromUrl);
 
             if (!cancelled) {
               setAvailability(availabilityData);
             }
-          } finally {
-            if (!cancelled) {
-              setLoadingAvailability(false);
-            }
+          }
+
+          return;
+        }
+
+        /*
+         * Admin / Receptionist
+         */
+        const [patientData, doctorData] = await Promise.all([
+          getPatients(),
+          getDoctors(),
+        ]);
+
+        if (!cancelled) {
+          setPatients(patientData);
+
+          setDoctors(doctorData);
+        }
+
+        if (doctorIdFromUrl) {
+          const availabilityData = await getDoctorAvailability(doctorIdFromUrl);
+
+          if (!cancelled) {
+            setAvailability(availabilityData);
           }
         }
       } catch (err) {
         if (!cancelled) {
           setError(
-            err.response?.data?.message || "Unable to load appointment data.",
+            err.response?.data?.message ||
+              "Unable to load appointment form data.",
           );
         }
       } finally {
@@ -120,12 +131,12 @@ function AppointmentForm() {
       }
     };
 
-    loadInitialData();
+    loadData();
 
     return () => {
       cancelled = true;
     };
-  }, [doctorIdFromUrl]);
+  }, [isPatient, doctorIdFromUrl]);
 
   /*
    * Called when doctor changes.
@@ -278,9 +289,13 @@ function AppointmentForm() {
 
     setSaving(true);
 
+    const patientIdForRequest = isPatient
+      ? auth.userId
+      : Number(formData.patientId);
+
     try {
       const payload = {
-        patientId: Number(formData.patientId),
+        patientId: Number(patientIdForRequest),
 
         doctorId: Number(formData.doctorId),
 
@@ -370,47 +385,74 @@ function AppointmentForm() {
               md:grid-cols-2
             "
           >
-            <div>
-              <label
-                className="
-                  text-sm
-                  font-medium
-                  text-slate-700
-                "
-              >
-                Patient
-              </label>
-
-              <select
-                name="patientId"
-                value={formData.patientId}
-                onChange={handleChange}
-                required
-                className={inputClass}
-              >
-                <option value="">Select patient</option>
-
-                {patients.map((patient) => (
-                  <option key={patient.id} value={patient.id}>
-                    {patient.firstName} {patient.lastName}
-                    {" — "}
-                    {patient.email}
-                  </option>
-                ))}
-              </select>
-
-              {patientIdFromUrl && (
-                <p
+            {isPatient ? (
+              <div>
+                <label
                   className="
-                    mt-2
-                    text-xs
-                    text-blue-600
+                    text-sm
+                    font-medium
+                    text-slate-700
                   "
                 >
-                  Patient preselected from the patient profile.
-                </p>
-              )}
-            </div>
+                  Patient
+                </label>
+
+                <div
+                  className="
+                    mt-2
+                    rounded-lg
+                    border
+                    border-slate-200
+                    bg-slate-50
+                    px-4
+                    py-2.5
+                    text-sm
+                    text-slate-700
+                  "
+                >
+                  Booking for your account
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label
+                  htmlFor="patientId"
+                  className="
+                    text-sm
+                    font-medium
+                    text-slate-700
+                  "
+                >
+                  Patient
+                </label>
+
+                <select
+                  id="patientId"
+                  name="patientId"
+                  value={formData.patientId}
+                  onChange={handleChange}
+                  required
+                  className="
+                    mt-2
+                    w-full
+                    rounded-lg
+                    border
+                    border-slate-300
+                    bg-white
+                    px-4
+                    py-2.5
+                  "
+                >
+                  <option value="">Select patient</option>
+
+                  {patients.map((patient) => (
+                    <option key={patient.id} value={patient.id}>
+                      {patient.firstName} {patient.lastName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div>
               <label

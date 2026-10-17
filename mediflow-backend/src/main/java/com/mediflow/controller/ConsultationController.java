@@ -6,6 +6,7 @@ import com.mediflow.service.ConsultationService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -19,6 +20,9 @@ public class ConsultationController {
     this.consultationService = consultationService;
   }
 
+  @PreAuthorize(
+      "hasRole('ADMIN') or @authorizationService.isDoctorOfAppointment(#request.appointmentId())"
+  )
   @PostMapping
   public ResponseEntity<ConsultationResponse> createConsultation(
       @Valid
@@ -30,9 +34,15 @@ public class ConsultationController {
         .body(consultationService.createConsultation(request));
   }
 
+  @PreAuthorize(
+      "hasRole('ADMIN') " +
+          "or @authorizationService.isDoctorOfAppointment(#appointmentId) " +
+          "or @authorizationService.isPatientOfAppointment(#appointmentId)"
+  )
   @GetMapping("/appointment/{appointmentId}")
-  public ResponseEntity<ConsultationResponse>
-  getByAppointment(@PathVariable Long appointmentId) {
+  public ResponseEntity<ConsultationResponse> getByAppointment(
+      @PathVariable Long appointmentId
+  ) {
 
     return ResponseEntity.ok(consultationService.getByAppointment(appointmentId));
   }

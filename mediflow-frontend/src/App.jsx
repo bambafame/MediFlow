@@ -2,14 +2,22 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 import Layout from "./components/Layout";
 
+import ProtectedRoute from "./components/ProtectedRoute";
+
+import Login from "./pages/auth/Login";
+
 import Dashboard from "./pages/Dashboard";
 
 import PatientList from "./pages/patients/PatientList";
+
 import PatientForm from "./pages/patients/PatientForm";
+
 import PatientDetails from "./pages/patients/PatientDetails";
 
 import DoctorList from "./pages/doctors/DoctorList";
+
 import DoctorForm from "./pages/doctors/DoctorForm";
+
 import DoctorDetails from "./pages/doctors/DoctorDetails";
 
 import SpecializationList from "./pages/specializations/SpecializationList";
@@ -30,11 +38,25 @@ import PrescriptionForm from "./pages/prescriptions/PrescriptionForm";
 
 import PrescriptionList from "./pages/prescriptions/PrescriptionList";
 
+import RoleRoute from "./components/RoleRoute";
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<Layout />}>
+        {/* Public */}
+
+        <Route path="/login" element={<Login />} />
+
+        {/* Protected application */}
+
+        <Route
+          element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
           <Route path="/" element={<Dashboard />} />
 
           {/* Patients */}
@@ -51,7 +73,14 @@ function App() {
 
           <Route path="/doctors" element={<DoctorList />} />
 
-          <Route path="/doctors/new" element={<DoctorForm />} />
+          <Route
+            path="/doctors/new"
+            element={
+              <RoleRoute allowedRoles={["ADMIN", "RECEPTIONIST"]}>
+                <DoctorForm />
+              </RoleRoute>
+            }
+          />
 
           <Route path="/doctors/:id" element={<DoctorDetails />} />
 
@@ -59,45 +88,79 @@ function App() {
 
           {/* Specializations */}
 
-          <Route path="/specializations" element={<SpecializationList />} />
+          <Route
+            path="/specializations"
+            element={
+              <RoleRoute allowedRoles={["ADMIN", "RECEPTIONIST"]}>
+                <SpecializationList />
+              </RoleRoute>
+            }
+          />
 
           {/* Appointments */}
 
           <Route path="/appointments" element={<AppointmentList />} />
 
-          <Route path="/appointments/new" element={<AppointmentForm />} />
-
-          <Route path="/appointments" element={<AppointmentList />} />
-
-          <Route path="/appointments/new" element={<AppointmentForm />} />
+          <Route
+            path="/appointments/new"
+            element={
+              <RoleRoute allowedRoles={["ADMIN", "RECEPTIONIST", "PATIENT"]}>
+                <AppointmentForm />
+              </RoleRoute>
+            }
+          />
 
           <Route path="/appointments/:id" element={<AppointmentDetails />} />
 
           <Route
             path="/appointments/:id/reschedule"
-            element={<RescheduleAppointment />}
+            element={
+              <RoleRoute allowedRoles={["ADMIN", "RECEPTIONIST", "PATIENT"]}>
+                <RescheduleAppointment />
+              </RoleRoute>
+            }
+          />
+
+          {/* Consultations */}
+
+          <Route
+            path="/appointments/:appointmentId/consultation/new"
+            element={
+              <RoleRoute allowedRoles={["ADMIN", "DOCTOR"]}>
+                <ConsultationForm />
+              </RoleRoute>
+            }
+          />
+
+          <Route
+            path="/appointments/:appointmentId/consultation"
+            element={
+              <RoleRoute allowedRoles={["ADMIN", "DOCTOR", "PATIENT"]}>
+                <ConsultationDetails />
+              </RoleRoute>
+            }
+          />
+
+          {/* Prescriptions */}
+
+          <Route
+            path="/appointments/:appointmentId/consultation/prescriptions/new"
+            element={
+              <RoleRoute allowedRoles={["ADMIN", "DOCTOR"]}>
+                <PrescriptionForm />
+              </RoleRoute>
+            }
+          />
+
+          <Route
+            path="/patients/:patientId/prescriptions"
+            element={
+              <RoleRoute allowedRoles={["ADMIN", "DOCTOR", "PATIENT"]}>
+                <PrescriptionList />
+              </RoleRoute>
+            }
           />
         </Route>
-
-        <Route
-          path="/appointments/:appointmentId/consultation/new"
-          element={<ConsultationForm />}
-        />
-
-        <Route
-          path="/appointments/:appointmentId/consultation"
-          element={<ConsultationDetails />}
-        />
-
-        <Route
-          path="/appointments/:appointmentId/consultation/prescriptions/new"
-          element={<PrescriptionForm />}
-        />
-
-        <Route
-          path="/patients/:patientId/prescriptions"
-          element={<PrescriptionList />}
-        />
       </Routes>
     </BrowserRouter>
   );

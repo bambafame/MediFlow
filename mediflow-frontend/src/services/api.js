@@ -8,11 +8,42 @@ const api = axios.create({
   },
 });
 
+/*
+ * Attach JWT to every request when available.
+ */
+api.interceptors.request.use(
+  (config) => {
+    const storedAuth = localStorage.getItem("mediflow_auth");
+
+    if (storedAuth) {
+      try {
+        const auth = JSON.parse(storedAuth);
+
+        if (auth?.token) {
+          config.headers.Authorization = `Bearer ${auth.token}`;
+        }
+      } catch {
+        localStorage.removeItem("mediflow_auth");
+      }
+    }
+
+    return config;
+  },
+
+  (error) => Promise.reject(error),
+);
+
 api.interceptors.response.use(
   (response) => response,
 
   (error) => {
-    console.error("API Error:", error.response?.data || error.message);
+    if (error.response?.status === 401) {
+      localStorage.removeItem("mediflow_auth");
+
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
+    }
 
     return Promise.reject(error);
   },

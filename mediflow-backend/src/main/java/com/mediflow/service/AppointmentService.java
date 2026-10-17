@@ -8,6 +8,9 @@ import com.mediflow.entity.AppointmentStatus;
 import com.mediflow.entity.Availability;
 import com.mediflow.entity.Doctor;
 import com.mediflow.entity.Patient;
+import com.mediflow.entity.Role;
+import com.mediflow.entity.User;
+import com.mediflow.exception.AccessDeniedException;
 import com.mediflow.exception.AppointmentConflictException;
 import com.mediflow.exception.InvalidAppointmentException;
 import com.mediflow.exception.ResourceNotFoundException;
@@ -16,6 +19,7 @@ import com.mediflow.repository.AppointmentRepository;
 import com.mediflow.repository.AvailabilityRepository;
 import com.mediflow.repository.DoctorRepository;
 import com.mediflow.repository.PatientRepository;
+import com.mediflow.security.AuthorizationService;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,17 +37,20 @@ public class AppointmentService {
   private final PatientRepository patientRepository;
   private final DoctorRepository doctorRepository;
   private final AvailabilityRepository availabilityRepository;
+  private final AuthorizationService authorizationService;
 
   public AppointmentService(
       AppointmentRepository appointmentRepository,
       PatientRepository patientRepository,
       DoctorRepository doctorRepository,
-      AvailabilityRepository availabilityRepository)
+      AvailabilityRepository availabilityRepository,
+      AuthorizationService authorizationService)
   {
     this.appointmentRepository = appointmentRepository;
     this.patientRepository = patientRepository;
     this.doctorRepository = doctorRepository;
     this.availabilityRepository = availabilityRepository;
+    this.authorizationService = authorizationService;
   }
 
   public AppointmentResponse bookAppointment(CreateAppointmentRequest request) {
@@ -60,6 +67,20 @@ public class AppointmentService {
         .orElseThrow(
             () -> new ResourceNotFoundException("Doctor not found with id: " + doctorId)
         );
+
+    User currentUser = authorizationService.getCurrentUser();
+
+    if (currentUser != null
+        &&
+        currentUser.getRole() == Role.PATIENT
+        &&
+        !currentUser.getUserId().equals(patientId)
+    ) {
+
+      throw new AccessDeniedException(
+          "Patients can only book appointments for themselves."
+      );
+    }
 
     validateSchedulingRules(
         patientId,

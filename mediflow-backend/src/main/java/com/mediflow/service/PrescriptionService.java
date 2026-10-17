@@ -4,10 +4,14 @@ import com.mediflow.dto.prescription.CreatePrescriptionRequest;
 import com.mediflow.dto.prescription.PrescriptionResponse;
 import com.mediflow.entity.Consultation;
 import com.mediflow.entity.Prescription;
+import com.mediflow.entity.Role;
+import com.mediflow.entity.User;
+import com.mediflow.exception.AccessDeniedException;
 import com.mediflow.exception.ResourceNotFoundException;
 import com.mediflow.mapper.PrescriptionMapper;
 import com.mediflow.repository.ConsultationRepository;
 import com.mediflow.repository.PrescriptionRepository;
+import com.mediflow.security.AuthorizationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,15 +23,17 @@ public class PrescriptionService {
 
   private final PrescriptionRepository prescriptionRepository;
   private final ConsultationRepository consultationRepository;
+  private final AuthorizationService authorizationService;
 
   public PrescriptionService(
       PrescriptionRepository prescriptionRepository,
-      ConsultationRepository consultationRepository
+      ConsultationRepository consultationRepository,
+      AuthorizationService authorizationService
   ) {
 
     this.prescriptionRepository = prescriptionRepository;
-
     this.consultationRepository = consultationRepository;
+    this.authorizationService = authorizationService;
   }
 
   public PrescriptionResponse createPrescription(CreatePrescriptionRequest request) {
@@ -35,6 +41,19 @@ public class PrescriptionService {
     Consultation consultation = consultationRepository
             .findById(request.consultationId())
             .orElseThrow(() -> new ResourceNotFoundException("Consultation not found"));
+
+    User currentUser = authorizationService.getCurrentUser();
+
+    if (currentUser.getRole() == Role.DOCTOR
+        && !consultation.getAppointment()
+        .getDoctor().getUserId()
+        .equals(currentUser.getUserId())
+    ) {
+
+      throw new AccessDeniedException(
+          "You are not assigned to this prescription."
+      );
+    }
 
     Prescription prescription = new Prescription();
 

@@ -196,51 +196,11 @@ function DoctorDetails() {
         </div>
       </section>
 
-      {/* Availability */}
-
-      <section
-        className="
-          mt-8
-          rounded-xl
-          border
-          border-slate-200
-          bg-white
-          p-8
-          shadow-sm
-        "
-      >
-        <h2 className="text-xl font-semibold text-slate-900">
-          Doctor Availability
-        </h2>
-
-        <p className="mt-1 text-sm text-slate-500">
-          Configure the days and times when this doctor accepts appointments.
-        </p>
-
-        <div className="mt-6">
-          <AvailabilityForm
-            doctorId={id}
-            onCreated={handleAvailabilityCreated}
-          />
-        </div>
-
-        <div className="mt-8">
-          <AvailabilityList availability={availability} />
-        </div>
-      </section>
-
       {/* Doctor workflow links */}
 
-      <div
-        className="
-          mt-8
-          grid
-          gap-4
-          md:grid-cols-2
-        "
-      >
+      <div className="mt-8 grid gap-4 md:grid-cols-2">
         <Link
-          to={`/appointments/new?doctorId=${doctor.id}`}
+          to={`/appointments?doctorId=${doctor.id}`}
           className="
             rounded-xl
             border
@@ -265,7 +225,7 @@ function DoctorDetails() {
         </Link>
 
         <Link
-          to="/appointments/new"
+          to={`/appointments/new?doctorId=${doctor.id}`}
           className="
             rounded-xl
             border

@@ -91,4 +91,40 @@ public interface AppointmentRepository
   List<Appointment> findTop10ByStartDateTimeAfterAndStatusNotOrderByStartDateTimeAsc(
       LocalDateTime dateTime, AppointmentStatus status
   );
+
+  long countByPatientUserId(Long patientId);
+
+  long countByPatientAndStatus(Long patientId, AppointmentStatus status);
+
+  long countByDoctorUserId(Long doctorId);
+
+  long countByDoctorAndStatus(Long doctorId, AppointmentStatus status);
+
+  List<Appointment> findByPatientUserIdAndStartDateTimeBetweenOrderByStartDateTimeAsc(
+      Long patientUserId, LocalDateTime start, LocalDateTime end
+  );
+
+  List<Appointment> findByDoctorUserIdAndStartDateTimeBetweenOrderByStartDateTimeAsc(
+      Long doctorId,
+      LocalDateTime start,
+      LocalDateTime end
+  );
+
+  List<Appointment>
+  findTop10ByPatientUserIdAndStartDateTimeAfterAndStatusNotOrderByStartDateTimeAsc(
+      Long patientId,
+      LocalDateTime dateTime,
+      AppointmentStatus excludedStatus
+  );
+
+  List<Appointment>
+  findTop10ByDoctorUserIdAndStartDateTimeAfterAndStatusNotOrderByStartDateTimeAsc(
+      Long doctorId,
+      LocalDateTime dateTime,
+      AppointmentStatus excludedStatus
+  );
+
+  long countByDoctorUserIdAndStatus(Long doctorId, AppointmentStatus appointmentStatus);
+
+  long countByPatientUserIdAndStatus(Long patientId, AppointmentStatus appointmentStatus);
 }

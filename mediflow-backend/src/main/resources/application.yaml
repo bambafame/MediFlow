@@ -19,3 +19,8 @@ spring:
 
 server:
   port: 8090
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:mediflow-development-secret-key-change-this-2026}
+    expiration-ms: 3600000 # 1hour

@@ -16,6 +16,7 @@ import PageHeader from "../../components/PageHeader";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import ErrorAlert from "../../components/ErrorAlert";
 import DetailItem from "../../components/DetailItem";
+import { useAuth } from "../../context/useAuth";
 
 function AppointmentDetails() {
   const { id } = useParams();
@@ -29,6 +30,40 @@ function AppointmentDetails() {
   const [processing, setProcessing] = useState(false);
 
   const [error, setError] = useState("");
+
+  const { auth } = useAuth();
+
+  const isAdmin = auth?.role === "ADMIN";
+
+  const isReceptionist = auth?.role === "RECEPTIONIST";
+
+  const isDoctor = auth?.role === "DOCTOR";
+
+  const isPatient = auth?.role === "PATIENT";
+
+  const canConfirm =
+    (isAdmin || isReceptionist) && appointment?.status === "SCHEDULED";
+
+  const isAppointmentPatient =
+    isPatient && Number(appointment?.patientId) === Number(auth?.userId);
+
+  const canReschedule =
+    (isAdmin || isReceptionist || isAppointmentPatient) &&
+    (appointment?.status === "SCHEDULED" ||
+      appointment?.status === "CONFIRMED");
+
+  const canCancel =
+    (isAdmin || isReceptionist || isAppointmentPatient) &&
+    (appointment?.status === "SCHEDULED" ||
+      appointment?.status === "CONFIRMED");
+
+  const isAssignedDoctor =
+    isDoctor && Number(appointment?.doctorId) === Number(auth?.userId);
+
+  const canStartConsultation =
+    (isAdmin || isAssignedDoctor) && appointment?.status === "CONFIRMED";
+
+  const canViewConsultation = appointment?.status === "COMPLETED";
 
   useEffect(() => {
     let cancelled = false;
@@ -106,16 +141,6 @@ function AppointmentDetails() {
     return <ErrorAlert message={error || "Appointment not found."} />;
   }
 
-  const canConfirm = appointment.status === "SCHEDULED";
-
-  const canReschedule =
-    appointment.status !== "CANCELLED" && appointment.status !== "COMPLETED";
-
-  const canCancel =
-    appointment.status !== "CANCELLED" && appointment.status !== "COMPLETED";
-
-  const canCreateConsultation = appointment.status === "CONFIRMED";
-
   return (
     <div>
       <PageHeader
@@ -181,7 +206,7 @@ function AppointmentDetails() {
               </button>
             )}
 
-            {canCreateConsultation && (
+            {canStartConsultation && (
               <Link
                 to={`/appointments/${appointment.appointmentId}/consultation/new`}
                 className="
@@ -199,7 +224,7 @@ function AppointmentDetails() {
               </Link>
             )}
 
-            {appointment.status === "COMPLETED" && (
+            {canViewConsultation && (
               <Link
                 to={`/appointments/${appointment.appointmentId}/consultation`}
                 className="

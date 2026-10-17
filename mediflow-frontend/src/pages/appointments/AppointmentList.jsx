@@ -2,11 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Link, useSearchParams } from "react-router-dom";
 
-import { getAppointments } from "../../services/appointmentService";
+import {
+  getAppointments,
+  getDoctorAppointments,
+  getPatientAppointments,
+} from "../../services/appointmentService";
 
 import { getPatients } from "../../services/patientService";
 
 import { getDoctors } from "../../services/doctorService";
+
+import { useAuth } from "../../context/useAuth";
 
 import PageHeader from "../../components/PageHeader";
 
@@ -19,18 +25,27 @@ import { formatDateTime } from "../../utils/timeUtils";
 import { getAppointmentStatusClass } from "../../utils/appointmentUtils";
 
 function AppointmentList() {
+  const { auth } = useAuth();
+
   const [searchParams, setSearchParams] = useSearchParams();
 
   /*
-   * URL query parameters are the
-   * single source of truth for filters.
-   *
-   * Examples:
-   *
-   * /appointments?patientId=1
-   * /appointments?doctorId=2
-   * /appointments?status=CONFIRMED
-   * /appointments?date=2026-10-20
+   * Roles
+   */
+  const isAdmin = auth?.role === "ADMIN";
+
+  const isReceptionist = auth?.role === "RECEPTIONIST";
+
+  const isDoctor = auth?.role === "DOCTOR";
+
+  const isPatient = auth?.role === "PATIENT";
+
+  const canViewAll = isAdmin || isReceptionist;
+
+  const canBook = isAdmin || isReceptionist || isPatient;
+
+  /*
+   * URL filters
    */
   const patientId = searchParams.get("patientId") || "";
 
@@ -57,28 +72,85 @@ function AppointmentList() {
   const [error, setError] = useState("");
 
   /*
-   * Load appointments, patients,
-   * and doctors once.
-   *
-   * This is the only useEffect required.
+   * Load only data allowed for
+   * the currently authenticated role.
    */
   useEffect(() => {
     let cancelled = false;
 
     const loadData = async () => {
       try {
-        const [appointmentData, patientData, doctorData] = await Promise.all([
-          getAppointments(),
-          getPatients(),
-          getDoctors(),
-        ]);
+        /*
+         * ADMIN / RECEPTIONIST
+         *
+         * Can see all appointments,
+         * all patients and all doctors.
+         */
+        if (canViewAll) {
+          const [appointmentData, patientData, doctorData] = await Promise.all([
+            getAppointments(),
+            getPatients(),
+            getDoctors(),
+          ]);
 
-        if (!cancelled) {
-          setAppointments(appointmentData);
+          if (!cancelled) {
+            setAppointments(appointmentData);
 
-          setPatients(patientData);
+            setPatients(patientData);
 
-          setDoctors(doctorData);
+            setDoctors(doctorData);
+          }
+
+          return;
+        }
+
+        /*
+         * DOCTOR
+         *
+         * Only appointments assigned
+         * to the logged-in doctor.
+         *
+         * Doctors may read patients,
+         * therefore patient filtering
+         * is available.
+         */
+        if (isDoctor) {
+          const [appointmentData, patientData] = await Promise.all([
+            getDoctorAppointments(auth.userId),
+
+            getPatients(),
+          ]);
+
+          if (!cancelled) {
+            setAppointments(appointmentData);
+
+            setPatients(patientData);
+          }
+
+          return;
+        }
+
+        /*
+         * PATIENT
+         *
+         * Only own appointments.
+         *
+         * Patients may read doctors,
+         * therefore doctor filtering
+         * remains available.
+         */
+        if (isPatient) {
+          const [appointmentData, doctorData] = await Promise.all([
+            getPatientAppointments(auth.userId),
+
+            getDoctors(),
+          ]);
+
+          if (!cancelled) {
+            setAppointments(appointmentData);
+
+            setDoctors(doctorData);
+          }
         }
       } catch (err) {
         if (!cancelled) {
@@ -98,19 +170,12 @@ function AppointmentList() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [auth?.userId, canViewAll, isDoctor, isPatient]);
 
   /*
-   * Update a query parameter
-   * immediately when a filter changes.
+   * Change query-string filter.
    *
-   * Example:
-   *
-   * doctorId = 2
-   *
-   * URL becomes:
-   *
-   * /appointments?doctorId=2
+   * No second useEffect is required.
    */
   const handleFilterChange = (event) => {
     const { name, value } = event.target;
@@ -127,47 +192,34 @@ function AppointmentList() {
   };
 
   /*
-   * Remove all filters.
+   * Clear allowed filters.
    */
   const clearFilters = () => {
     setSearchParams({});
   };
 
   /*
-   * Filter the appointments already
-   * loaded from the backend.
-   *
-   * No second useEffect is needed.
+   * Filter already-authorized
+   * appointment data.
    */
   const filteredAppointments = useMemo(() => {
     return appointments.filter((appointment) => {
-      /*
-       * Patient
-       */
-      if (patientId && String(appointment.patientId) !== patientId) {
+      if (
+        !isPatient &&
+        patientId &&
+        String(appointment.patientId) !== patientId
+      ) {
         return false;
       }
 
-      /*
-       * Doctor
-       */
-      if (doctorId && String(appointment.doctorId) !== doctorId) {
+      if (!isDoctor && doctorId && String(appointment.doctorId) !== doctorId) {
         return false;
       }
 
-      /*
-       * Status
-       */
       if (status && appointment.status !== status) {
         return false;
       }
 
-      /*
-       * Date
-       *
-       * startDateTime example:
-       * 2026-10-20T09:00:00
-       */
       if (date) {
         const appointmentDate = appointment.startDateTime?.split("T")[0];
 
@@ -178,31 +230,31 @@ function AppointmentList() {
 
       return true;
     });
-  }, [appointments, patientId, doctorId, status, date]);
+  }, [appointments, patientId, doctorId, status, date, isDoctor, isPatient]);
 
-  /*
-   * Keep existing filters when
-   * navigating to Book Appointment.
-   *
-   * Example:
-   *
-   * If patientId=5 is active,
-   * booking will open with patient 5
-   * already selected.
-   */
   const bookingParams = new URLSearchParams();
 
-  if (patientId) {
-    bookingParams.set("patientId", patientId);
+  if (isPatient && auth?.userId) {
+    bookingParams.set("patientId", String(auth.userId));
+  } else {
+    if (patientId) {
+      bookingParams.set("patientId", patientId);
+    }
+
+    if (doctorId) {
+      bookingParams.set("doctorId", doctorId);
+    }
   }
 
-  if (doctorId) {
-    bookingParams.set("doctorId", doctorId);
-  }
+  const bookingQuery = bookingParams.toString();
 
-  const bookingUrl = bookingParams.toString()
-    ? `/appointments/new?${bookingParams.toString()}`
+  const bookingUrl = bookingQuery
+    ? `/appointments/new?${bookingQuery}`
     : "/appointments/new";
+
+  const hasActiveFilters = Boolean(
+    status || date || (!isPatient && patientId) || (!isDoctor && doctorId),
+  );
 
   if (loading) {
     return <LoadingSpinner />;
@@ -212,23 +264,31 @@ function AppointmentList() {
     <div>
       <PageHeader
         title="Appointments"
-        description="View and manage clinic appointments."
+        description={
+          isDoctor
+            ? "View your assigned appointments."
+            : isPatient
+              ? "View and manage your appointments."
+              : "View and manage clinic appointments."
+        }
         action={
-          <Link
-            to={bookingUrl}
-            className="
-              rounded-lg
-              bg-blue-600
-              px-5
-              py-2.5
-              text-sm
-              font-semibold
-              text-white
-              hover:bg-blue-700
-            "
-          >
-            + Book Appointment
-          </Link>
+          canBook ? (
+            <Link
+              to={bookingUrl}
+              className="
+                rounded-lg
+                bg-blue-600
+                px-5
+                py-2.5
+                text-sm
+                font-semibold
+                text-white
+                hover:bg-blue-700
+              "
+            >
+              + Book Appointment
+            </Link>
+          ) : null
         }
       />
 
@@ -255,95 +315,101 @@ function AppointmentList() {
             xl:grid-cols-4
           "
         >
-          {/* Patient filter */}
+          {/* Patient filter
+              hidden for PATIENT */}
 
-          <div>
-            <label
-              htmlFor="patientId"
-              className="
-                text-sm
-                font-medium
-                text-slate-700
-              "
-            >
-              Patient
-            </label>
+          {!isPatient && (
+            <div>
+              <label
+                htmlFor="patientId"
+                className="
+                  text-sm
+                  font-medium
+                  text-slate-700
+                "
+              >
+                Patient
+              </label>
 
-            <select
-              id="patientId"
-              name="patientId"
-              value={patientId}
-              onChange={handleFilterChange}
-              className="
-                mt-2
-                w-full
-                rounded-lg
-                border
-                border-slate-300
-                bg-white
-                px-4
-                py-2.5
-                outline-none
-                focus:border-blue-500
-                focus:ring-2
-                focus:ring-blue-100
-              "
-            >
-              <option value="">All patients</option>
+              <select
+                id="patientId"
+                name="patientId"
+                value={patientId}
+                onChange={handleFilterChange}
+                className="
+                  mt-2
+                  w-full
+                  rounded-lg
+                  border
+                  border-slate-300
+                  bg-white
+                  px-4
+                  py-2.5
+                  outline-none
+                  focus:border-blue-500
+                  focus:ring-2
+                  focus:ring-blue-100
+                "
+              >
+                <option value="">All patients</option>
 
-              {patients.map((patient) => (
-                <option key={patient.id} value={patient.id}>
-                  {patient.firstName} {patient.lastName}
-                </option>
-              ))}
-            </select>
-          </div>
+                {patients.map((patient) => (
+                  <option key={patient.id} value={patient.id}>
+                    {patient.firstName} {patient.lastName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-          {/* Doctor filter */}
+          {/* Doctor filter
+              hidden for DOCTOR */}
 
-          <div>
-            <label
-              htmlFor="doctorId"
-              className="
-                text-sm
-                font-medium
-                text-slate-700
-              "
-            >
-              Doctor
-            </label>
+          {!isDoctor && (
+            <div>
+              <label
+                htmlFor="doctorId"
+                className="
+                  text-sm
+                  font-medium
+                  text-slate-700
+                "
+              >
+                Doctor
+              </label>
 
-            <select
-              id="doctorId"
-              name="doctorId"
-              value={doctorId}
-              onChange={handleFilterChange}
-              className="
-                mt-2
-                w-full
-                rounded-lg
-                border
-                border-slate-300
-                bg-white
-                px-4
-                py-2.5
-                outline-none
-                focus:border-blue-500
-                focus:ring-2
-                focus:ring-blue-100
-              "
-            >
-              <option value="">All doctors</option>
+              <select
+                id="doctorId"
+                name="doctorId"
+                value={doctorId}
+                onChange={handleFilterChange}
+                className="
+                  mt-2
+                  w-full
+                  rounded-lg
+                  border
+                  border-slate-300
+                  bg-white
+                  px-4
+                  py-2.5
+                  outline-none
+                  focus:border-blue-500
+                  focus:ring-2
+                  focus:ring-blue-100
+                "
+              >
+                <option value="">All doctors</option>
 
-              {doctors.map((doctor) => (
-                <option key={doctor.id} value={doctor.id}>
-                  Dr. {doctor.firstName} {doctor.lastName}
-                </option>
-              ))}
-            </select>
-          </div>
+                {doctors.map((doctor) => (
+                  <option key={doctor.id} value={doctor.id}>
+                    Dr. {doctor.firstName} {doctor.lastName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-          {/* Status filter */}
+          {/* Status */}
 
           <div>
             <label
@@ -391,7 +457,7 @@ function AppointmentList() {
             </select>
           </div>
 
-          {/* Date filter */}
+          {/* Date */}
 
           <div>
             <label
@@ -429,8 +495,6 @@ function AppointmentList() {
           </div>
         </div>
 
-        {/* Filter controls */}
-
         <div
           className="
             mt-5
@@ -442,12 +506,7 @@ function AppointmentList() {
             pt-4
           "
         >
-          <p
-            className="
-              text-sm
-              text-slate-500
-            "
-          >
+          <p className="text-sm text-slate-500">
             Showing{" "}
             <span
               className="
@@ -461,7 +520,7 @@ function AppointmentList() {
             {filteredAppointments.length === 1 ? "" : "s"}
           </p>
 
-          {(patientId || doctorId || status || date) && (
+          {hasActiveFilters && (
             <button
               type="button"
               onClick={clearFilters}
@@ -497,46 +556,37 @@ function AppointmentList() {
             text-center
           "
         >
-          <h2
-            className="
-              text-lg
-              font-semibold
-              text-slate-800
-            "
-          >
+          <h2 className="text-lg font-semibold text-slate-800">
             No appointments found
           </h2>
 
-          <p
-            className="
-              mt-2
-              text-slate-500
-            "
-          >
-            Try changing the filters or book a new appointment.
+          <p className="mt-2 text-slate-500">
+            {hasActiveFilters
+              ? "Try changing or clearing the filters."
+              : "There are currently no appointments to display."}
           </p>
 
-          <Link
-            to={bookingUrl}
-            className="
-              mt-5
-              inline-block
-              rounded-lg
-              bg-blue-600
-              px-5
-              py-2.5
-              text-sm
-              font-semibold
-              text-white
-              hover:bg-blue-700
-            "
-          >
-            Book Appointment
-          </Link>
+          {canBook && (
+            <Link
+              to={bookingUrl}
+              className="
+                mt-5
+                inline-block
+                rounded-lg
+                bg-blue-600
+                px-5
+                py-2.5
+                text-sm
+                font-semibold
+                text-white
+                hover:bg-blue-700
+              "
+            >
+              Book Appointment
+            </Link>
+          )}
         </div>
       ) : (
-        /* Appointment table */
-
         <div
           className="
             overflow-hidden
@@ -653,32 +703,33 @@ function AppointmentList() {
                   >
                     {/* Patient */}
 
-                    <td
-                      className="
-                          px-6
-                          py-4
-                        "
-                    >
-                      <Link
-                        to={`/patients/${appointment.patientId}`}
-                        className="
-                            font-medium
-                            text-slate-900
-                            hover:text-blue-600
-                          "
-                      >
-                        {appointment.patientName}
-                      </Link>
+                    <td className="px-6 py-4">
+                      {isPatient ? (
+                        <span
+                          className="
+                              font-medium
+                              text-slate-900
+                            "
+                        >
+                          {appointment.patientName}
+                        </span>
+                      ) : (
+                        <Link
+                          to={`/patients/${appointment.patientId}`}
+                          className="
+                              font-medium
+                              text-slate-900
+                              hover:text-blue-600
+                            "
+                        >
+                          {appointment.patientName}
+                        </Link>
+                      )}
                     </td>
 
                     {/* Doctor */}
 
-                    <td
-                      className="
-                          px-6
-                          py-4
-                        "
-                    >
+                    <td className="px-6 py-4">
                       <Link
                         to={`/doctors/${appointment.doctorId}`}
                         className="
@@ -726,24 +777,14 @@ function AppointmentList() {
                           text-slate-600
                         "
                     >
-                      <p
-                        className="
-                            truncate
-                          "
-                        title={appointment.reason}
-                      >
+                      <p className="truncate" title={appointment.reason}>
                         {appointment.reason}
                       </p>
                     </td>
 
                     {/* Status */}
 
-                    <td
-                      className="
-                          px-6
-                          py-4
-                        "
-                    >
+                    <td className="px-6 py-4">
                       <span
                         className={`
                             inline-flex
@@ -759,7 +800,7 @@ function AppointmentList() {
                       </span>
                     </td>
 
-                    {/* Actions */}
+                    {/* Action */}
 
                     <td
                       className="

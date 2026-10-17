@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 
 import { getDashboard } from "../services/dashboardService";
 
+import { useAuth } from "../context/useAuth";
+
 import { formatDateTime } from "../utils/timeUtils";
 
 import { getAppointmentStatusClass } from "../utils/appointmentUtils";
@@ -19,6 +21,27 @@ function Dashboard() {
 
   const [error, setError] = useState("");
 
+  const { auth } = useAuth();
+
+  /*
+   * Roles
+   */
+  const isAdmin = auth?.role === "ADMIN";
+
+  const isReceptionist = auth?.role === "RECEPTIONIST";
+
+  const isDoctor = auth?.role === "DOCTOR";
+
+  const isPatient = auth?.role === "PATIENT";
+
+  const isClinicStaff = isAdmin || isReceptionist;
+
+  /*
+   * Load role-aware dashboard.
+   *
+   * The backend decides which data
+   * the authenticated user may see.
+   */
   useEffect(() => {
     let cancelled = false;
 
@@ -55,6 +78,45 @@ function Dashboard() {
     return <ErrorAlert message={error || "Unable to load dashboard."} />;
   }
 
+  /*
+   * Role-specific page content
+   */
+  const pageTitle = isPatient
+    ? "My Dashboard"
+    : isDoctor
+      ? "Doctor Dashboard"
+      : "Dashboard";
+
+  const pageDescription = isPatient
+    ? "View your appointments and upcoming care."
+    : isDoctor
+      ? "View your assigned appointments and clinical schedule."
+      : "Clinic activity and upcoming appointments.";
+
+  const todayTitle = isPatient
+    ? "Today's Appointments"
+    : isDoctor
+      ? "Today's Schedule"
+      : "Today's Clinic Schedule";
+
+  const todayDescription = isPatient
+    ? "Your appointments scheduled for today."
+    : isDoctor
+      ? "Appointments assigned to you today."
+      : "Appointments scheduled for today.";
+
+  const upcomingTitle = isPatient
+    ? "My Upcoming Appointments"
+    : isDoctor
+      ? "Upcoming Assigned Appointments"
+      : "Upcoming Appointments";
+
+  const upcomingDescription = isPatient
+    ? "Your next scheduled appointments."
+    : isDoctor
+      ? "Your next assigned appointments."
+      : "Next scheduled clinic visits.";
+
   return (
     <div>
       {/* Header */}
@@ -78,7 +140,7 @@ function Dashboard() {
               text-slate-900
             "
           >
-            Dashboard
+            {pageTitle}
           </h1>
 
           <p
@@ -87,9 +149,11 @@ function Dashboard() {
               text-slate-500
             "
           >
-            Clinic activity and upcoming appointments.
+            {pageDescription}
           </p>
         </div>
+
+        {/* Quick Actions */}
 
         <div
           className="
@@ -98,57 +162,103 @@ function Dashboard() {
             gap-3
           "
         >
-          <Link
-            to="/patients/new"
-            className="
-              rounded-lg
-              border
-              border-slate-300
-              bg-white
-              px-4
-              py-2.5
-              text-sm
-              font-semibold
-              text-slate-700
-              hover:bg-slate-50
-            "
-          >
-            + Patient
-          </Link>
+          {/* ADMIN / RECEPTIONIST */}
 
-          <Link
-            to="/doctors/new"
-            className="
-              rounded-lg
-              border
-              border-slate-300
-              bg-white
-              px-4
-              py-2.5
-              text-sm
-              font-semibold
-              text-slate-700
-              hover:bg-slate-50
-            "
-          >
-            + Doctor
-          </Link>
+          {isClinicStaff && (
+            <>
+              <Link
+                to="/patients/new"
+                className="
+                  rounded-lg
+                  border
+                  border-slate-300
+                  bg-white
+                  px-4
+                  py-2.5
+                  text-sm
+                  font-semibold
+                  text-slate-700
+                  hover:bg-slate-50
+                "
+              >
+                + Patient
+              </Link>
 
-          <Link
-            to="/appointments/new"
-            className="
-              rounded-lg
-              bg-blue-600
-              px-4
-              py-2.5
-              text-sm
-              font-semibold
-              text-white
-              hover:bg-blue-700
-            "
-          >
-            + Book Appointment
-          </Link>
+              <Link
+                to="/doctors/new"
+                className="
+                  rounded-lg
+                  border
+                  border-slate-300
+                  bg-white
+                  px-4
+                  py-2.5
+                  text-sm
+                  font-semibold
+                  text-slate-700
+                  hover:bg-slate-50
+                "
+              >
+                + Doctor
+              </Link>
+
+              <Link
+                to="/appointments/new"
+                className="
+                  rounded-lg
+                  bg-blue-600
+                  px-4
+                  py-2.5
+                  text-sm
+                  font-semibold
+                  text-white
+                  hover:bg-blue-700
+                "
+              >
+                + Book Appointment
+              </Link>
+            </>
+          )}
+
+          {/* PATIENT */}
+
+          {isPatient && (
+            <Link
+              to="/appointments/new"
+              className="
+                rounded-lg
+                bg-blue-600
+                px-4
+                py-2.5
+                text-sm
+                font-semibold
+                text-white
+                hover:bg-blue-700
+              "
+            >
+              + Book Appointment
+            </Link>
+          )}
+
+          {/* DOCTOR */}
+
+          {isDoctor && (
+            <Link
+              to="/appointments"
+              className="
+                rounded-lg
+                bg-blue-600
+                px-4
+                py-2.5
+                text-sm
+                font-semibold
+                text-white
+                hover:bg-blue-700
+              "
+            >
+              View My Schedule
+            </Link>
+          )}
         </div>
       </div>
 
@@ -164,36 +274,87 @@ function Dashboard() {
           xl:grid-cols-4
         "
       >
-        <StatCard
-          title="Patients"
-          value={dashboard.totalPatients}
-          description="Registered patients"
-          link="/patients"
-        />
+        {/* Clinic-wide statistics:
+            ADMIN / RECEPTIONIST only */}
+
+        {isClinicStaff && (
+          <>
+            <StatCard
+              title="Patients"
+              value={dashboard.totalPatients ?? 0}
+              description="Registered patients"
+              link="/patients"
+            />
+
+            <StatCard
+              title="Doctors"
+              value={dashboard.totalDoctors ?? 0}
+              description="Medical staff"
+              link="/doctors"
+            />
+          </>
+        )}
+
+        {/* Appointment total */}
 
         <StatCard
-          title="Doctors"
-          value={dashboard.totalDoctors}
-          description="Medical staff"
-          link="/doctors"
-        />
-
-        <StatCard
-          title="Appointments"
-          value={dashboard.totalAppointments}
-          description="Total appointments"
+          title={isClinicStaff ? "Appointments" : "My Appointments"}
+          value={dashboard.totalAppointments ?? 0}
+          description={
+            isPatient
+              ? "Your total appointments"
+              : isDoctor
+                ? "Appointments assigned to you"
+                : "Total appointments"
+          }
           link="/appointments"
         />
+
+        {/* Today */}
 
         <StatCard
           title="Today"
           value={dashboard.todayAppointments?.length || 0}
-          description="Appointments today"
+          description={
+            isPatient
+              ? "Your appointments today"
+              : isDoctor
+                ? "Assigned appointments today"
+                : "Appointments today"
+          }
           link="/appointments"
         />
+
+        {/* For doctor/patient, add useful
+            personal statistics so the top
+            section still contains four cards */}
+
+        {!isClinicStaff && (
+          <>
+            <StatCard
+              title="Upcoming"
+              value={dashboard.upcomingAppointments?.length || 0}
+              description={
+                isPatient
+                  ? "Your upcoming appointments"
+                  : "Your upcoming schedule"
+              }
+              link="/appointments"
+            />
+
+            <StatCard
+              title="Completed"
+              value={dashboard.completedAppointments ?? 0}
+              description={
+                isPatient ? "Completed appointments" : "Completed consultations"
+              }
+              link="/appointments?status=COMPLETED"
+            />
+          </>
+        )}
       </div>
 
-      {/* Status */}
+      {/* Appointment Status */}
 
       <section
         className="
@@ -213,7 +374,7 @@ function Dashboard() {
             text-slate-900
           "
         >
-          Appointment Status
+          {isClinicStaff ? "Appointment Status" : "My Appointment Status"}
         </h2>
 
         <div
@@ -227,49 +388,51 @@ function Dashboard() {
         >
           <StatusCard
             label="Scheduled"
-            value={dashboard.scheduledAppointments}
+            value={dashboard.scheduledAppointments ?? 0}
             status="SCHEDULED"
           />
 
           <StatusCard
             label="Confirmed"
-            value={dashboard.confirmedAppointments}
+            value={dashboard.confirmedAppointments ?? 0}
             status="CONFIRMED"
           />
 
           <StatusCard
             label="Completed"
-            value={dashboard.completedAppointments}
+            value={dashboard.completedAppointments ?? 0}
             status="COMPLETED"
           />
 
           <StatusCard
             label="Cancelled"
-            value={dashboard.cancelledAppointments}
+            value={dashboard.cancelledAppointments ?? 0}
             status="CANCELLED"
           />
         </div>
       </section>
 
+      {/* Today's Schedule + Recent Patients */}
+
       <div
-        className="
+        className={`
           mt-8
           grid
           gap-8
-          xl:grid-cols-3
-        "
+          ${isClinicStaff ? "xl:grid-cols-3" : "grid-cols-1"}
+        `}
       >
         {/* Today's Schedule */}
 
         <section
-          className="
-            xl:col-span-2
+          className={`
             rounded-xl
             border
             border-slate-200
             bg-white
             shadow-sm
-          "
+            ${isClinicStaff ? "xl:col-span-2" : ""}
+          `}
         >
           <div
             className="
@@ -289,7 +452,7 @@ function Dashboard() {
                   text-slate-900
                 "
               >
-                Today's Schedule
+                {todayTitle}
               </h2>
 
               <p
@@ -299,7 +462,7 @@ function Dashboard() {
                   text-slate-500
                 "
               >
-                Appointments scheduled for today.
+                {todayDescription}
               </p>
             </div>
 
@@ -316,7 +479,7 @@ function Dashboard() {
             </Link>
           </div>
 
-          {dashboard.todayAppointments.length === 0 ? (
+          {dashboard.todayAppointments?.length === 0 ? (
             <div
               className="
                 p-10
@@ -333,7 +496,7 @@ function Dashboard() {
                 divide-slate-100
               "
             >
-              {dashboard.todayAppointments.map((appointment) => (
+              {dashboard.todayAppointments?.map((appointment) => (
                 <AppointmentRow
                   key={appointment.appointmentId}
                   appointment={appointment}
@@ -343,116 +506,120 @@ function Dashboard() {
           )}
         </section>
 
-        {/* Recent Patients */}
+        {/* Recent Patients:
+            ADMIN / RECEPTIONIST only */}
 
-        <section
-          className="
-            rounded-xl
-            border
-            border-slate-200
-            bg-white
-            shadow-sm
-          "
-        >
-          <div
+        {isClinicStaff && (
+          <section
             className="
-              border-b
+              rounded-xl
+              border
               border-slate-200
-              p-6
+              bg-white
+              shadow-sm
             "
           >
-            <h2
-              className="
-                text-lg
-                font-semibold
-                text-slate-900
-              "
-            >
-              Recent Patients
-            </h2>
-          </div>
-
-          {dashboard.recentPatients.length === 0 ? (
             <div
               className="
-                p-8
-                text-center
-                text-sm
-                text-slate-500
+                border-b
+                border-slate-200
+                p-6
               "
             >
-              No patients yet.
+              <h2
+                className="
+                  text-lg
+                  font-semibold
+                  text-slate-900
+                "
+              >
+                Recent Patients
+              </h2>
             </div>
-          ) : (
-            <div
-              className="
-                divide-y
-                divide-slate-100
-              "
-            >
-              {dashboard.recentPatients.map((patient) => (
-                <Link
-                  key={patient.id}
-                  to={`/patients/${patient.id}`}
-                  className="
-                      block
-                      p-5
-                      transition
-                      hover:bg-slate-50
-                    "
-                >
-                  <div
+
+            {dashboard.recentPatients?.length === 0 ? (
+              <div
+                className="
+                  p-8
+                  text-center
+                  text-sm
+                  text-slate-500
+                "
+              >
+                No patients yet.
+              </div>
+            ) : (
+              <div
+                className="
+                  divide-y
+                  divide-slate-100
+                "
+              >
+                {dashboard.recentPatients?.map((patient) => (
+                  <Link
+                    key={patient.id}
+                    to={`/patients/${patient.id}`}
                     className="
-                        flex
-                        items-center
-                        gap-3
+                        block
+                        p-5
+                        transition
+                        hover:bg-slate-50
                       "
                   >
                     <div
                       className="
                           flex
-                          h-10
-                          w-10
                           items-center
-                          justify-center
-                          rounded-full
-                          bg-blue-100
-                          font-semibold
-                          text-blue-700
+                          gap-3
                         "
                     >
-                      {patient.firstName?.[0]}
-                      {patient.lastName?.[0]}
-                    </div>
-
-                    <div>
                       <div
                         className="
-                            font-medium
-                            text-slate-900
+                            flex
+                            h-10
+                            w-10
+                            items-center
+                            justify-center
+                            rounded-full
+                            bg-blue-100
+                            font-semibold
+                            text-blue-700
                           "
                       >
-                        {patient.firstName} {patient.lastName}
+                        {patient.firstName?.[0]}
+
+                        {patient.lastName?.[0]}
                       </div>
 
-                      <div
-                        className="
-                            text-sm
-                            text-slate-500
-                          "
-                      >
-                        {patient.email}
+                      <div>
+                        <div
+                          className="
+                              font-medium
+                              text-slate-900
+                            "
+                        >
+                          {patient.firstName} {patient.lastName}
+                        </div>
+
+                        <div
+                          className="
+                              text-sm
+                              text-slate-500
+                            "
+                        >
+                          {patient.email}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
       </div>
 
-      {/* Upcoming */}
+      {/* Upcoming Appointments */}
 
       <section
         className="
@@ -482,7 +649,7 @@ function Dashboard() {
                 text-slate-900
               "
             >
-              Upcoming Appointments
+              {upcomingTitle}
             </h2>
 
             <p
@@ -492,12 +659,24 @@ function Dashboard() {
                 text-slate-500
               "
             >
-              Next scheduled clinic visits.
+              {upcomingDescription}
             </p>
           </div>
+
+          <Link
+            to="/appointments"
+            className="
+              text-sm
+              font-medium
+              text-blue-600
+              hover:text-blue-800
+            "
+          >
+            View all
+          </Link>
         </div>
 
-        {dashboard.upcomingAppointments.length === 0 ? (
+        {dashboard.upcomingAppointments?.length === 0 ? (
           <div
             className="
               p-10
@@ -514,7 +693,7 @@ function Dashboard() {
               divide-slate-100
             "
           >
-            {dashboard.upcomingAppointments.map((appointment) => (
+            {dashboard.upcomingAppointments?.map((appointment) => (
               <AppointmentRow
                 key={appointment.appointmentId}
                 appointment={appointment}
@@ -527,6 +706,9 @@ function Dashboard() {
   );
 }
 
+/*
+ * Main dashboard statistics card
+ */
 function StatCard({ title, value, description, link }) {
   return (
     <Link
@@ -577,6 +759,9 @@ function StatCard({ title, value, description, link }) {
   );
 }
 
+/*
+ * Appointment status statistics
+ */
 function StatusCard({ label, value, status }) {
   return (
     <div
@@ -615,6 +800,10 @@ function StatusCard({ label, value, status }) {
   );
 }
 
+/*
+ * Reusable appointment row for
+ * today/upcoming dashboard sections.
+ */
 function AppointmentRow({ appointment }) {
   return (
     <Link
@@ -661,11 +850,7 @@ function AppointmentRow({ appointment }) {
           gap-5
         "
       >
-        <div
-          className="
-            text-right
-          "
-        >
+        <div className="text-right">
           <p
             className="
               text-sm

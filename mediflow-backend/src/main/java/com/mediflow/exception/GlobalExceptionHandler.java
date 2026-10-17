@@ -25,6 +25,12 @@ public class GlobalExceptionHandler {
     return buildResponse(HttpStatus.CONFLICT, ex.getMessage());
   }
 
+  @ExceptionHandler(AccessDeniedException.class)
+  public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
+
+    return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage());
+  }
+
   @ExceptionHandler(InvalidAppointmentException.class)
   public ResponseEntity<Map<String, Object>> handleInvalidAppointment(InvalidAppointmentException ex) {
 

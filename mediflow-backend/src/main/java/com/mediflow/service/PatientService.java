@@ -4,10 +4,12 @@ import com.mediflow.dto.patient.CreatePatientRequest;
 import com.mediflow.dto.patient.PatientResponse;
 import com.mediflow.dto.patient.UpdatePatientRequest;
 import com.mediflow.entity.Patient;
+import com.mediflow.entity.Role;
 import com.mediflow.exception.ResourceNotFoundException;
 import com.mediflow.mapper.PatientMapper;
 import com.mediflow.repository.PatientRepository;
 import com.mediflow.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,14 +21,17 @@ public class PatientService {
 
   private final PatientRepository patientRepository;
   private final UserRepository userRepository;
+  private final PasswordEncoder passwordEncoder;
 
   public PatientService(
       PatientRepository patientRepository,
-      UserRepository userRepository
+      UserRepository userRepository,
+      PasswordEncoder passwordEncoder
   ) {
 
     this.patientRepository = patientRepository;
     this.userRepository = userRepository;
+    this.passwordEncoder = passwordEncoder;
   }
 
   public PatientResponse createPatient(CreatePatientRequest request) {
@@ -45,8 +50,9 @@ public class PatientService {
 
     Patient patient = new Patient();
 
+    patient.setRole(Role.PATIENT);
     patient.setUsername(request.username());
-    patient.setPasswordHash(request.password()); // temporary
+    patient.setPasswordHash(passwordEncoder.encode(request.password()));
     patient.setEmail(request.email());
     patient.setPhoneNumber(request.phoneNumber());
     patient.setFirstName(request.firstName());

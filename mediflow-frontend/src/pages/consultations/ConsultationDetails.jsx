@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 
 import { Link, useParams } from "react-router-dom";
 
-import {
-  getConsultationByAppointment,
-  getConsultationPrescriptions,
-} from "../../services/consultationService";
+import { getConsultationByAppointment } from "../../services/consultationService";
+
+import { getConsultationPrescriptions } from "../../services/prescriptionService";
 
 import { getAppointmentById } from "../../services/appointmentService";
+
+import { useAuth } from "../../context/useAuth";
 
 import PageHeader from "../../components/PageHeader";
 import LoadingSpinner from "../../components/LoadingSpinner";
@@ -27,6 +28,25 @@ function ConsultationDetails() {
   const [loading, setLoading] = useState(true);
 
   const [error, setError] = useState("");
+
+  const { auth } = useAuth();
+
+  const isAdmin = auth?.role === "ADMIN";
+
+  const isDoctor = auth?.role === "DOCTOR";
+
+  const isPatient = auth?.role === "PATIENT";
+
+  const isAssignedDoctor =
+    isDoctor && Number(appointment?.doctorId) === Number(auth?.userId);
+
+  const isAppointmentPatient =
+    isPatient && Number(appointment?.patientId) === Number(auth?.userId);
+
+  const canViewConsultation =
+    isAdmin || isAssignedDoctor || isAppointmentPatient;
+
+  const canAddPrescription = isAdmin || isAssignedDoctor;
 
   useEffect(() => {
     let cancelled = false;
@@ -81,27 +101,35 @@ function ConsultationDetails() {
     return <ErrorAlert message={error || "Consultation not found."} />;
   }
 
+  if (!loading && !canViewConsultation) {
+    return (
+      <ErrorAlert message="You are not authorized to view this consultation." />
+    );
+  }
+
   return (
     <div>
       <PageHeader
         title="Consultation"
         description={`Appointment #${appointmentId}`}
         action={
-          <Link
-            to={`/appointments/${appointmentId}/consultation/prescriptions/new`}
-            className="
-              rounded-lg
-              bg-blue-600
-              px-4
-              py-2.5
-              text-sm
-              font-semibold
-              text-white
-              hover:bg-blue-700
-            "
-          >
-            + Add Prescription
-          </Link>
+          canAddPrescription && (
+            <Link
+              to={`/appointments/${appointmentId}/consultation/prescriptions/new`}
+              className="
+                rounded-lg
+                bg-blue-600
+                px-4
+                py-2
+                text-sm
+                font-semibold
+                text-white
+                hover:bg-blue-700
+              "
+            >
+              + Add Prescription
+            </Link>
+          )
         }
       />
 

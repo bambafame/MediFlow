@@ -5,11 +5,15 @@ import com.mediflow.dto.consultation.CreateConsultationRequest;
 import com.mediflow.entity.Appointment;
 import com.mediflow.entity.AppointmentStatus;
 import com.mediflow.entity.Consultation;
+import com.mediflow.entity.Role;
+import com.mediflow.entity.User;
 import com.mediflow.exception.InvalidAppointmentException;
 import com.mediflow.exception.ResourceNotFoundException;
 import com.mediflow.mapper.ConsultationMapper;
 import com.mediflow.repository.AppointmentRepository;
 import com.mediflow.repository.ConsultationRepository;
+import com.mediflow.exception.AccessDeniedException;
+import com.mediflow.security.AuthorizationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,13 +23,16 @@ public class ConsultationService {
 
   private final ConsultationRepository consultationRepository;
   private final AppointmentRepository appointmentRepository;
+  private final AuthorizationService authorizationService;
 
   public ConsultationService(
       ConsultationRepository consultationRepository,
-      AppointmentRepository appointmentRepository)
-  {
+      AppointmentRepository appointmentRepository,
+      AuthorizationService authorizationService
+  ) {
     this.consultationRepository = consultationRepository;
     this.appointmentRepository = appointmentRepository;
+    this.authorizationService = authorizationService;
   }
 
   public ConsultationResponse createConsultation(CreateConsultationRequest request) {
@@ -35,6 +42,17 @@ public class ConsultationService {
 
     if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
       throw new InvalidAppointmentException("Cannot create consultation for cancelled appointment");
+    }
+
+    User currentUser = authorizationService.getCurrentUser();
+
+    if (currentUser.getRole() == Role.DOCTOR
+            && !appointment.getDoctor().getUserId().equals(currentUser.getUserId())
+    ) {
+
+      throw new AccessDeniedException(
+          "You are not assigned to this appointment."
+      );
     }
 
     consultationRepository
