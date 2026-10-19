@@ -90,6 +90,12 @@ function Navbar() {
           <NavLink to="/appointments" className={linkClass}>
             Appointments
           </NavLink>
+
+          {auth?.role === "ADMIN" && (
+            <NavLink to="/admin/users" className={linkClass}>
+              User Management
+            </NavLink>
+          )}
         </div>
 
         <div

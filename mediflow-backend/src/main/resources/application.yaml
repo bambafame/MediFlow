@@ -3,18 +3,21 @@ spring:
     name: mediflow-backend
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/mediflow
-    username: mediflow_user
-    password: mediflow_password
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/mediflow}
+    username: ${DB_USERNAME:mediflow_user}
+    password: ${DB_PASSWORD:mediflow_password}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
       ddl-auto: update
+
     show-sql: true
+
     properties:
       hibernate:
         format_sql: true
+
     open-in-view: false
 
 server:
@@ -23,4 +26,15 @@ server:
 app:
   jwt:
     secret: ${JWT_SECRET:mediflow-development-secret-key-change-this-2026}
-    expiration-ms: 3600000 # 1hour
+    expiration-ms: 3600000
+
+  bootstrap:
+    admin:
+      username: ${ADMIN_USERNAME:admin}
+      password: ${ADMIN_PASSWORD:Admin@12345}
+      email: ${ADMIN_EMAIL:admin@mediflow.com}
+
+    receptionist:
+      username: ${RECEPTIONIST_USERNAME:receptionist}
+      password: ${RECEPTIONIST_PASSWORD:Reception@12345}
+      email: ${RECEPTIONIST_EMAIL:receptionist@mediflow.com}

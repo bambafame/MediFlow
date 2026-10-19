@@ -1,0 +1,76 @@
+services:
+
+  postgres:
+    image: postgres:17
+
+    container_name: mediflow-postgres
+
+    environment:
+      POSTGRES_DB: mediflow
+      POSTGRES_USER: mediflow_user
+      POSTGRES_PASSWORD: mediflow_password
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - mediflow_postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U mediflow_user -d mediflow"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+
+  backend:
+    build:
+      context: ./mediflow-backend
+
+    container_name: mediflow-backend
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/mediflow
+      DB_USERNAME: mediflow_user
+      DB_PASSWORD: mediflow_password
+
+      JWT_SECRET: mediflow-development-secret-key-change-this-2026
+
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: Admin@12345
+      ADMIN_EMAIL: admin@mediflow.com
+
+      RECEPTIONIST_USERNAME: receptionist
+      RECEPTIONIST_PASSWORD: Reception@12345
+      RECEPTIONIST_EMAIL: receptionist@mediflow.com
+
+    ports:
+      - "8090:8090"
+
+
+  frontend:
+    build:
+      context: ./mediflow-frontend
+
+    container_name: mediflow-frontend
+
+    depends_on:
+      - backend
+
+    environment:
+      VITE_API_BASE_URL: http://localhost:8090/api
+
+    ports:
+      - "5173:5173"
+
+
+volumes:
+  mediflow_postgres_data:

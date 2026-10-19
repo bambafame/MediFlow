@@ -2,6 +2,8 @@ package com.mediflow.repository;
 
 import com.mediflow.entity.Appointment;
 import com.mediflow.entity.AppointmentStatus;
+import com.mediflow.entity.Doctor;
+import com.mediflow.entity.Patient;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -127,4 +129,12 @@ public interface AppointmentRepository
   long countByDoctorUserIdAndStatus(Long doctorId, AppointmentStatus appointmentStatus);
 
   long countByPatientUserIdAndStatus(Long patientId, AppointmentStatus appointmentStatus);
+
+  boolean existsByPatientAndStartDateTimeLessThanAndEndDateTimeGreaterThanAndStatusNot(
+      Patient patient, LocalDateTime startDateTimeIsLessThan, LocalDateTime endDateTimeIsGreaterThan, AppointmentStatus statut
+  );
+
+  boolean existsByDoctorAndStartDateTimeLessThanAndEndDateTimeGreaterThanAndStatusNot(
+      Doctor doctor, LocalDateTime startDateTimeIsLessThan, LocalDateTime endDateTimeIsGreaterThan, AppointmentStatus status
+  );
 }

@@ -39,6 +39,7 @@ import PrescriptionForm from "./pages/prescriptions/PrescriptionForm";
 import PrescriptionList from "./pages/prescriptions/PrescriptionList";
 
 import RoleRoute from "./components/RoleRoute";
+import AdminUsers from "./pages/admin/AdminUsers";
 
 function App() {
   return (
@@ -161,6 +162,15 @@ function App() {
             }
           />
         </Route>
+
+        <Route
+          path="/admin/users"
+          element={
+            <RoleRoute allowedRoles={["ADMIN"]}>
+              <AdminUsers />
+            </RoleRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );
