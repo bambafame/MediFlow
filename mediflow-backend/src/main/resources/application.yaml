@@ -38,3 +38,6 @@ app:
       username: ${RECEPTIONIST_USERNAME:receptionist}
       password: ${RECEPTIONIST_PASSWORD:Reception@12345}
       email: ${RECEPTIONIST_EMAIL:receptionist@mediflow.com}
+
+  demo-data:
+    enabled: ${DEMO_DATA_ENABLED:false}
